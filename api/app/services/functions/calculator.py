@@ -1,7 +1,7 @@
 import ast
 import operator
 import math
-from typing import Any, Union
+from typing import Any, Dict, Union
 from app.services.functions.base import BaseFunction, FunctionDefinition, FunctionParameter
 import logging
 

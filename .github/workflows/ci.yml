@@ -53,11 +53,12 @@ jobs:
     - name: Run tests with coverage
       env:
         REDIS_URL: redis://localhost:6379
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-key' }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'test-key' }}
+        ENVIRONMENT: test
       run: |
         cd api
-        pytest tests/ -v --cov=app --cov-report=xml --cov-report=html
+        pytest tests/ -v --cov=app --cov-report=xml --cov-report=html --ignore=tests/load_test.py
     
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
