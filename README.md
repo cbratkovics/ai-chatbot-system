@@ -1,11 +1,17 @@
 # AI-Powered Conversational Intelligence Platform
 
+[![CI Pipeline](https://github.com/cbratkovics/ai-chatbot-system/actions/workflows/ci.yml/badge.svg)](https://github.com/cbratkovics/ai-chatbot-system/actions/workflows/ci.yml)
+[![Deploy to Production](https://github.com/cbratkovics/ai-chatbot-system/actions/workflows/deploy.yml/badge.svg)](https://github.com/cbratkovics/ai-chatbot-system/actions/workflows/deploy.yml)
+[![Load Testing](https://github.com/cbratkovics/ai-chatbot-system/actions/workflows/load-test.yml/badge.svg)](https://github.com/cbratkovics/ai-chatbot-system/actions/workflows/load-test.yml)
+
 A production-grade, multi-tenant conversational AI platform demonstrating enterprise-level AI engineering practices. This system handles 100+ concurrent users with real-time streaming responses, intelligent caching, and comprehensive observability.
 
 ## 🚀 Features
 
 ### Core Capabilities
 - **Multi-Model Orchestration**: Seamless integration with OpenAI and Anthropic models
+- **Function Calling**: Built-in calculator, data analysis, web search, and scraping functions
+- **Multi-Modal Support**: GPT-4 Vision integration for image understanding
 - **Intelligent Failover**: Automatic fallback between providers for high availability
 - **Real-time Streaming**: WebSocket-based streaming for responsive user experience
 - **Semantic Caching**: Embedding-based cache for intelligent response reuse
