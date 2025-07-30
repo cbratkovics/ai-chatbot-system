@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 from app.config import settings
-from app.routes import chat, websocket
+from app.routes import chat, websocket, upload
 from app.routes.health import router as health_router
 from app.middleware.rate_limiter import rate_limit_middleware
 from app.middleware.error_handler import ErrorHandlerMiddleware
@@ -53,6 +53,7 @@ app.middleware("http")(rate_limit_middleware)
 app.include_router(health_router)
 app.include_router(chat.router)
 app.include_router(websocket.router)
+app.include_router(upload.router)
 
 # Add metrics endpoint
 @app.get("/metrics")

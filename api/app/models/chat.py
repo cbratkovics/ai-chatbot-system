@@ -1,12 +1,20 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Literal
+from typing import Optional, List, Dict, Literal, Union
 from datetime import datetime
 import uuid
+
+class ImageContent(BaseModel):
+    type: Literal["image_url"] = "image_url"
+    image_url: Dict[str, str]  # {"url": "data:image/jpeg;base64,..." or "https://..."}
+
+class TextContent(BaseModel):
+    type: Literal["text"] = "text"
+    text: str
 
 class Message(BaseModel):
     message_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str
-    content: str
+    content: Union[str, List[Union[TextContent, ImageContent]]]
     role: Literal["user", "assistant", "system"]
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     metadata: Optional[Dict] = None
@@ -34,6 +42,7 @@ class ChatRequest(BaseModel):
     model: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    images: Optional[List[str]] = None  # Base64 encoded images or URLs
 
 class ChatResponse(BaseModel):
     message: Message

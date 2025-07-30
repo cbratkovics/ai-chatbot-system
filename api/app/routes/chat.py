@@ -10,8 +10,13 @@ from app.services.monitoring.metrics import (
     cache_hits, cache_misses, track_metrics
 )
 from app.services.monitoring.quality import QualityEvaluator
+from app.services.image_processor import ImageProcessor
+from app.models.chat import TextContent, ImageContent
 from app.config import settings
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
@@ -21,6 +26,7 @@ llm_provider = OpenAIProvider()
 orchestrator = LLMOrchestrator()
 semantic_cache = SemanticCache()
 quality_evaluator = QualityEvaluator()
+image_processor = ImageProcessor()
 
 @router.post("/sessions", response_model=ChatSession)
 async def create_session(user_id: Optional[str] = None):
@@ -81,10 +87,27 @@ async def send_message(request: ChatRequest):
     else:
         cache_misses.labels(cache_type="semantic").inc()
     
+    # Process images if provided
+    message_content = request.message
+    if request.images:
+        # Create multi-modal content
+        content_parts = [TextContent(text=request.message)]
+        
+        for image_data in request.images[:4]:  # Limit to 4 images
+            try:
+                processed_image = await image_processor.process_image(image_data)
+                content_parts.append(ImageContent(
+                    image_url={"url": processed_image}
+                ))
+            except Exception as e:
+                logger.error(f"Error processing image: {str(e)}")
+        
+        message_content = content_parts
+    
     # Add user message
     user_message = Message(
         session_id=session.session_id,
-        content=request.message,
+        content=message_content,
         role="user"
     )
     await session_manager.add_message(session.session_id, user_message)

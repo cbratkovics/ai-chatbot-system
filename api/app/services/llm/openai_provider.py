@@ -29,10 +29,24 @@ class OpenAIProvider(LLMProvider):
     ) -> Dict:
         start_time = time.time()
         
-        formatted_messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in messages
-        ]
+        # Format messages for OpenAI API
+        formatted_messages = []
+        for msg in messages:
+            if isinstance(msg.content, str):
+                formatted_messages.append({"role": msg.role, "content": msg.content})
+            else:
+                # Handle multi-modal content
+                formatted_content = []
+                for content in msg.content:
+                    if hasattr(content, 'type'):
+                        if content.type == "text":
+                            formatted_content.append({"type": "text", "text": content.text})
+                        elif content.type == "image_url":
+                            formatted_content.append({"type": "image_url", "image_url": content.image_url})
+                    else:
+                        # Fallback for dict content
+                        formatted_content.append(content)
+                formatted_messages.append({"role": msg.role, "content": formatted_content})
         
         # Prepare function calling parameters
         functions = None
@@ -121,10 +135,24 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.7,
         max_tokens: int = 1000
     ) -> AsyncIterator[str]:
-        formatted_messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in messages
-        ]
+        # Format messages for OpenAI API (same as generate_response)
+        formatted_messages = []
+        for msg in messages:
+            if isinstance(msg.content, str):
+                formatted_messages.append({"role": msg.role, "content": msg.content})
+            else:
+                # Handle multi-modal content
+                formatted_content = []
+                for content in msg.content:
+                    if hasattr(content, 'type'):
+                        if content.type == "text":
+                            formatted_content.append({"type": "text", "text": content.text})
+                        elif content.type == "image_url":
+                            formatted_content.append({"type": "image_url", "image_url": content.image_url})
+                    else:
+                        # Fallback for dict content
+                        formatted_content.append(content)
+                formatted_messages.append({"role": msg.role, "content": formatted_content})
         
         stream = await self.client.chat.completions.create(
             model=model,
