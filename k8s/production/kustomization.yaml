@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-chatbot
+
+bases:
+  - ../base
+
+resources:
+  - ingress.yaml
+  - redis-pvc.yaml
+  - prometheus-servicemonitor.yaml
+
+patchesStrategicMerge:
+  - redis-pvc-patch.yaml
+
+images:
+  - name: ghcr.io/cbratkovics/ai-chatbot-api
+    newTag: latest
+
+replicas:
+  - name: ai-chatbot-api
+    count: 3

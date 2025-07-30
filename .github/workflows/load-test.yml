@@ -1,0 +1,125 @@
+name: Load Testing
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL for load testing'
+        required: true
+        default: 'https://api.ai-chatbot.yourdomain.com'
+      users:
+        description: 'Number of concurrent users'
+        required: true
+        default: '100'
+      duration:
+        description: 'Test duration in seconds'
+        required: true
+        default: '300'
+
+jobs:
+  load-test:
+    name: Performance Load Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install Locust
+      run: |
+        pip install locust
+    
+    - name: Run load test
+      run: |
+        cd api/tests
+        locust -f load_test.py \
+          --headless \
+          --users ${{ github.event.inputs.users || '100' }} \
+          --spawn-rate 10 \
+          --run-time ${{ github.event.inputs.duration || '300' }}s \
+          --host ${{ github.event.inputs.target_url || 'https://api.ai-chatbot.yourdomain.com' }} \
+          --html performance-report.html \
+          --csv performance-data
+    
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-report
+        path: |
+          api/tests/performance-report.html
+          api/tests/performance-data_*.csv
+    
+    - name: Analyze results
+      run: |
+        cd api/tests
+        python -c "
+        import csv
+        import json
+        
+        # Read stats
+        with open('performance-data_stats.csv', 'r') as f:
+            reader = csv.DictReader(f)
+            stats = list(reader)
+        
+        # Find summary row
+        summary = next((row for row in stats if row['Name'] == 'Aggregated'), None)
+        
+        if summary:
+            p95_response = float(summary.get('95%', 0))
+            failure_rate = float(summary.get('Failure Count', 0)) / float(summary.get('Request Count', 1)) * 100
+            
+            print(f'P95 Response Time: {p95_response}ms')
+            print(f'Failure Rate: {failure_rate:.2f}%')
+            
+            # Check SLOs
+            if p95_response > 2000:
+                print('WARNING: P95 response time exceeds 2000ms SLO')
+                exit(1)
+            if failure_rate > 1:
+                print('WARNING: Failure rate exceeds 1% SLO')
+                exit(1)
+            
+            print('All SLOs passed!')
+        "
+    
+    - name: Create performance badge
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Extract metrics and create badge data
+        cd api/tests
+        P95=$(python -c "
+        import csv
+        with open('performance-data_stats.csv', 'r') as f:
+            reader = csv.DictReader(f)
+            stats = list(reader)
+            summary = next((row for row in stats if row['Name'] == 'Aggregated'), None)
+            if summary:
+                print(int(float(summary.get('95%', 0))))
+        ")
+        
+        echo "{\"p95_response_time\": \"${P95}ms\"}" > metrics.json
+    
+    - name: Notify results
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        custom_payload: |
+          {
+            text: "Load test completed",
+            attachments: [{
+              color: '${{ job.status }}' === 'success' ? 'good' : 'danger',
+              fields: [
+                { title: 'Status', value: '${{ job.status }}', short: true },
+                { title: 'Users', value: '${{ github.event.inputs.users || '100' }}', short: true },
+                { title: 'Duration', value: '${{ github.event.inputs.duration || '300' }}s', short: true }
+              ]
+            }]
+          }
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}

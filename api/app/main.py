@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting AI Conversational Platform")
+    
+    # Initialize functions for function calling
+    from app.services.functions.init_functions import initialize_functions
+    initialize_functions()
+    
     yield
     # Shutdown
     logger.info("Shutting down AI Conversational Platform")

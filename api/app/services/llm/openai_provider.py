@@ -1,9 +1,11 @@
 import openai
-from typing import List, AsyncIterator, Dict
+from typing import List, AsyncIterator, Dict, Optional
 import tiktoken
+import json
 from app.services.llm.base import LLMProvider
 from app.models.chat import Message
 from app.config import settings
+from app.services.functions.base import function_registry
 import time
 
 class OpenAIProvider(LLMProvider):
@@ -22,7 +24,8 @@ class OpenAIProvider(LLMProvider):
         model: str = "gpt-4",
         temperature: float = 0.7,
         max_tokens: int = 1000,
-        stream: bool = False
+        stream: bool = False,
+        use_functions: bool = True
     ) -> Dict:
         start_time = time.time()
         
@@ -31,19 +34,69 @@ class OpenAIProvider(LLMProvider):
             for msg in messages
         ]
         
+        # Prepare function calling parameters
+        functions = None
+        if use_functions and function_registry.get_all_schemas():
+            functions = function_registry.get_all_schemas()
+        
         try:
-            response = await self.client.chat.completions.create(
-                model=model,
-                messages=formatted_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=stream
-            )
+            # Create completion with or without functions
+            create_params = {
+                "model": model,
+                "messages": formatted_messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": stream
+            }
+            
+            if functions:
+                create_params["functions"] = functions
+                create_params["function_call"] = "auto"
+            
+            response = await self.client.chat.completions.create(**create_params)
             
             if not stream:
-                content = response.choices[0].message.content
+                message = response.choices[0].message
+                content = message.content
                 input_tokens = response.usage.prompt_tokens
                 output_tokens = response.usage.completion_tokens
+                
+                # Check if function was called
+                function_call = None
+                if hasattr(message, 'function_call') and message.function_call:
+                    function_call = {
+                        "name": message.function_call.name,
+                        "arguments": json.loads(message.function_call.arguments)
+                    }
+                    
+                    # Execute the function
+                    result = await function_registry.execute_function(
+                        function_call["name"],
+                        function_call["arguments"]
+                    )
+                    
+                    # Add function result to messages and get final response
+                    formatted_messages.append({
+                        "role": "assistant",
+                        "content": content,
+                        "function_call": message.function_call.model_dump()
+                    })
+                    formatted_messages.append({
+                        "role": "function",
+                        "name": function_call["name"],
+                        "content": json.dumps(result.result if not result.error else {"error": result.error})
+                    })
+                    
+                    # Get final response with function result
+                    final_response = await self.client.chat.completions.create(
+                        model=model,
+                        messages=formatted_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens
+                    )
+                    
+                    content = final_response.choices[0].message.content
+                    output_tokens += final_response.usage.completion_tokens
                 
                 return {
                     "content": content,
@@ -52,7 +105,8 @@ class OpenAIProvider(LLMProvider):
                     "total_tokens": input_tokens + output_tokens,
                     "cost": self.calculate_cost(input_tokens, output_tokens, model),
                     "latency_ms": (time.time() - start_time) * 1000,
-                    "model": model
+                    "model": model,
+                    "function_call": function_call
                 }
             else:
                 return response
