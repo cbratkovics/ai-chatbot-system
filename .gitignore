@@ -16,10 +16,35 @@ dist/
 build/
 *.egg-info/
 
-# Environment variables
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
+secrets/
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Kubernetes secrets
+**/secret.yaml
+**/secrets.yaml
+!**/secret.yaml.example
+!**/secrets.yaml.example
+*-secret.yaml
+*-secrets.yaml
+
+# API Keys and credentials
+**/api_key*
+**/apikey*
+**/*_key.txt
+**/*_secret.txt
+**/credentials*
+!**/credentials.example
+
+# Sealed secrets
+**/sealed-secrets.yaml
 
 # IDE
 .vscode/
