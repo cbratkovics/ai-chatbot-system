@@ -196,9 +196,7 @@ RUN pip install --no-cache-dir \
 
 USER appuser
 
-# Performance optimized gunicorn config
-COPY gunicorn.performance.conf.py gunicorn.conf.py
-
+# Use default gunicorn settings with environment variables
 ENV GUNICORN_WORKERS=4 \
     GUNICORN_WORKER_CLASS=gevent \
     GUNICORN_WORKER_CONNECTIONS=1000 \
@@ -207,4 +205,4 @@ ENV GUNICORN_WORKERS=4 \
     GUNICORN_TIMEOUT=30 \
     GUNICORN_KEEPALIVE=5
 
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "api.main:app"]
+CMD ["gunicorn", "api.app.main:app", "--bind", "0.0.0.0:8000"]
