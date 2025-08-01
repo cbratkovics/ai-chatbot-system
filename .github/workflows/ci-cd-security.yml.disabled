@@ -50,7 +50,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r api/requirements.txt
           pip install -r requirements-dev.txt
           
       # License Compliance Check
@@ -75,16 +75,16 @@ jobs:
           bandit -r . -f txt
           
       - name: CodeQL Analysis
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: python, javascript
           queries: security-extended,security-and-quality
           
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+        uses: github/codeql-action/autobuild@v3
         
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:python"
           
@@ -113,7 +113,7 @@ jobs:
           output: 'trivy-iac-results.sarif'
           
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-iac-results.sarif'
@@ -131,7 +131,7 @@ jobs:
           output: 'trivy-results.sarif'
           
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -224,7 +224,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r api/requirements.txt
           pip install -r requirements-dev.txt
           
       - name: Install Node.js dependencies
@@ -391,7 +391,7 @@ jobs:
           output: 'trivy-container-results.sarif'
           
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-container-results.sarif'
@@ -428,7 +428,7 @@ jobs:
       - name: Install documentation dependencies
         run: |
           pip install sphinx sphinx-rtd-theme sphinx-autodoc-typehints
-          pip install -r requirements.txt
+          pip install -r api/requirements.txt
           
       - name: Generate API Documentation
         run: |

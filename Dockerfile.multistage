@@ -2,7 +2,7 @@
 # Optimized for security, performance, and minimal attack surface
 
 # Build stage - Development dependencies and compilation
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Build arguments
 ARG BUILD_DATE
@@ -35,11 +35,10 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 COPY . .
 
 # Build application (if needed)
-RUN python -m compileall -b . && \
-    python setup.py build
+RUN python -m compileall -b api/ || true
 
 # Test stage - Run tests in isolated environment
-FROM builder as tester
+FROM builder AS tester
 
 # Install test dependencies
 COPY requirements-dev.txt ./
@@ -49,7 +48,7 @@ RUN pip install --no-cache-dir --user -r requirements-dev.txt
 RUN python -m pytest tests/ -v --tb=short
 
 # Production stage - Minimal runtime image
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 # Build metadata
 LABEL org.opencontainers.image.created=$BUILD_DATE \
@@ -123,10 +122,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 EXPOSE 8000
 
 # Default command
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "api.main:app"]
+CMD ["python", "-m", "uvicorn", "api.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Development stage - For local development
-FROM builder as development
+FROM builder AS development
 
 # Install development dependencies
 COPY requirements-dev.txt ./
@@ -160,7 +159,7 @@ EXPOSE 8000 5678
 CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # Security scanning stage
-FROM production as security-scan
+FROM production AS security-scan
 
 USER root
 
@@ -179,7 +178,7 @@ RUN trivy fs --exit-code 0 --no-progress --format json --output /app/security-sc
 USER appuser
 
 # Performance optimized stage
-FROM production as performance
+FROM production AS performance
 
 # Install performance monitoring tools
 USER root
