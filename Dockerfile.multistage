@@ -4,10 +4,11 @@
 # Build stage - Development dependencies and compilation
 FROM python:3.11-slim AS builder
 
-# Build arguments
-ARG BUILD_DATE
-ARG VCS_REF
-ARG VERSION
+# Build arguments with default values
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
+ARG VERSION=latest
+ARG PYTHONPATH=/app
 
 # Install system dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -60,12 +61,18 @@ RUN mkdir -p tests && \
 # Production stage - Minimal runtime image
 FROM python:3.11-slim AS production
 
+# Re-declare ARGs for this stage with defaults
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
+ARG VERSION=latest
+ARG PYTHONPATH=/app
+
 # Build metadata
-LABEL org.opencontainers.image.created=$BUILD_DATE \
+LABEL org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.url="https://github.com/cbratkovics/ai-chatbot-system" \
       org.opencontainers.image.source="https://github.com/cbratkovics/ai-chatbot-system" \
-      org.opencontainers.image.version=$VERSION \
-      org.opencontainers.image.revision=$VCS_REF \
+      org.opencontainers.image.version=${VERSION} \
+      org.opencontainers.image.revision=${VCS_REF} \
       org.opencontainers.image.vendor="AI Chatbot System" \
       org.opencontainers.image.title="AI Chatbot API" \
       org.opencontainers.image.description="Enterprise AI Chatbot System API Server" \
@@ -117,7 +124,7 @@ USER appuser
 
 # Update PATH to include user packages
 ENV PATH="/home/appuser/.local/bin:$PATH" \
-    PYTHONPATH="/app:$PYTHONPATH" \
+    PYTHONPATH="/app:${PYTHONPATH}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONIOENCODING=utf-8 \
@@ -166,7 +173,7 @@ ENV FLASK_ENV=development \
 # Expose debug port
 EXPOSE 8000 5678
 
-CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["python", "-m", "uvicorn", "api.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # Security scanning stage
 FROM production AS security-scan
@@ -208,4 +215,4 @@ ENV GUNICORN_WORKERS=4 \
     GUNICORN_TIMEOUT=30 \
     GUNICORN_KEEPALIVE=5
 
-CMD ["gunicorn", "api.app.main:app", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "api.app.main:app", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn.workers.UvicornWorker"]

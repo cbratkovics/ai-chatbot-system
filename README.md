@@ -238,6 +238,60 @@ Access pre-configured dashboards:
 - **Cost Analysis**: http://localhost:3000/d/costs
 - **User Analytics**: http://localhost:3000/d/analytics
 
+## 🔍 Observability & Tracing
+
+### Setup
+```bash
+# Start observability stack
+docker-compose -f docker-compose.tracing.yml up -d
+
+# Access services
+- Jaeger UI: http://localhost:16686
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000
+```
+
+### Distributed Tracing
+Comprehensive request tracing with OpenTelemetry:
+- Request lifecycle tracking
+- Cache hit/miss analysis
+- Provider API call monitoring
+- Latency breakdown by component
+- Error tracking and correlation
+
+## 📊 Performance Benchmarks
+
+### Semantic Caching
+- **Scenario**: [docs/benchmarks/cache_savings/scenario.md](docs/benchmarks/cache_savings/scenario.md)
+- **Results**: ~29.3% cost reduction, 29.4% cache hit rate
+- **Run**: `python benchmarks/run_cache_benchmark.py`
+- **Details**: [Full analysis](docs/benchmarks/cache_savings/summary.md)
+
+### Request Batching
+- **Scenario**: [docs/benchmarks/batching_reduction/scenario.md](docs/benchmarks/batching_reduction/scenario.md)
+- **Results**: ~87.5% API call reduction, 256% throughput improvement
+- **Run**: `python benchmarks/run_batching_benchmark.py`
+- **Details**: [Full analysis](docs/benchmarks/batching_reduction/summary.md)
+
+## 🏗️ Architecture
+
+### Design Patterns
+Comprehensive implementation of enterprise design patterns:
+- [Design Patterns Documentation](docs/architecture/design_patterns.md)
+- [Message Flow Diagram](docs/architecture/message_flow.png)
+
+#### Implemented Patterns
+- **Adapter Pattern**: Unified interface for multiple AI providers
+- **Strategy Pattern**: Dynamic model selection based on optimization goals
+- **Chain of Responsibility**: Modular middleware pipeline
+- **Observer Pattern**: Event-driven architecture
+- **Repository Pattern**: Data access abstraction
+- **Factory Pattern**: Provider and cache instantiation
+- **Singleton Pattern**: Configuration management
+- **Decorator Pattern**: Cross-cutting concerns
+- **Command Pattern**: Request encapsulation
+- **Template Method**: Customizable processing pipeline
+
 ## Testing
 
 ```bash
@@ -253,6 +307,10 @@ cd tests/load_testing
 
 # Security scanning
 python scripts/security_checks.py
+
+# Benchmark tests
+python benchmarks/run_cache_benchmark.py --mode both
+python benchmarks/run_batching_benchmark.py --mode both
 ```
 
 ## Security
