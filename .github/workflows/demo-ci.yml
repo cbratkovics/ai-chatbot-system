@@ -1,11 +1,7 @@
 name: Demo Branch CI/CD
 
 on:
-  push:
-    branches: [demo]
-  pull_request:
-    branches: [demo]
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Manual trigger only since demo branch doesn't exist
 
 env:
   DOCKER_BUILDKIT: 1
