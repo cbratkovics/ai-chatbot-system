@@ -77,7 +77,7 @@ class LicenseChecker:
                         category='LICENSE_VIOLATION',
                         title=f'Forbidden license: {license_name}',
                         description=f'Package {package_name} uses forbidden license {license_name}',
-                        file_path='requirements.txt',
+                        file_path='config/requirements/base.txt',
                         recommendation=f'Replace {package_name} with alternative having approved license'
                     ))
                     
@@ -87,7 +87,7 @@ class LicenseChecker:
                         category='LICENSE_REVIEW',
                         title=f'Unapproved license: {license_name}',
                         description=f'Package {package_name} uses unapproved license {license_name}',
-                        file_path='requirements.txt',
+                        file_path='config/requirements/base.txt',
                         recommendation=f'Review license {license_name} for compliance'
                     ))
                     
@@ -192,7 +192,7 @@ class VulnerabilityScanner:
                         category='DEPENDENCY_VULNERABILITY',
                         title=f"Vulnerable package: {vuln.get('package')}",
                         description=vuln.get('advisory'),
-                        file_path='requirements.txt',
+                        file_path='config/requirements/base.txt',
                         cve_id=vuln.get('vulnerability_id'),
                         recommendation=f"Upgrade to version {vuln.get('analyzed_version')}"
                     ))

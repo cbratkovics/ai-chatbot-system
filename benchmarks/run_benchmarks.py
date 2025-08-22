@@ -131,9 +131,9 @@ class BenchmarkRunner:
         """Start required services using docker-compose"""
         logger.info("Starting services...")
         
-        compose_file = Path('docker-compose.yml')
+        compose_file = Path('config/docker/compose/docker-compose.yml')
         if not compose_file.exists():
-            logger.warning("docker-compose.yml not found, skipping service startup")
+            logger.warning("config/docker/compose/docker-compose.yml not found, skipping service startup")
             return True
         
         try:

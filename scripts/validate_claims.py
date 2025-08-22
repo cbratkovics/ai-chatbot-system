@@ -241,9 +241,9 @@ class ClaimValidator:
         """Verify documentation completeness"""
         required_docs = [
             Path('README.md'),
-            Path('ARCHITECTURE.md'),
-            Path('PERFORMANCE.md'),
-            Path('SECURITY.md'),
+            Path('docs/architecture/ARCHITECTURE.md'),
+            Path('docs/performance/PERFORMANCE.md'),
+            Path('docs/security/SECURITY.md'),
             Path('CONTRIBUTING.md'),
             Path('LICENSE'),
         ]
@@ -263,7 +263,7 @@ class ClaimValidator:
             Path('.github/workflows/ci.yml'),
             Path('ci/comprehensive-testing.yml'),
             Path('Dockerfile'),
-            Path('docker-compose.yml'),
+            Path('config/docker/compose/docker-compose.yml'),
         ]
         
         existing = [f for f in ci_files if f.exists()]
@@ -410,7 +410,7 @@ def main():
     if '--run-benchmarks' in sys.argv:
         print("Running benchmarks first...")
         result = subprocess.run(
-            ['python', 'manage.py', 'benchmark'],
+            ['python', 'scripts/utils/manage.py', 'benchmark'],
             capture_output=True,
             text=True
         )
