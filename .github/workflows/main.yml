@@ -2,23 +2,13 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: false
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
 
 env:
   PYTHON_VERSION: '3.11'
-  NODE_VERSION: '18'
   DOCKER_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
