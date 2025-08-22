@@ -58,8 +58,8 @@ setup: install migrate seed
 # Install all dependencies
 install:
 	@echo "📦 Installing Python dependencies..."
-	pip install -r requirements.txt
-	pip install -r requirements-dev.txt
+	pip install -r config/requirements/base.txt
+	pip install -r config/requirements/dev.txt
 	@echo "📦 Installing Node.js dependencies..."
 	@if [ -d "frontend" ]; then \
 		cd frontend && npm install; \
@@ -71,12 +71,12 @@ install:
 # Database operations
 migrate:
 	@echo "🔄 Running database migrations..."
-	python manage.py migrate
+	python scripts/utils/manage.py migrate
 	@echo "✅ Migrations complete"
 
 seed:
 	@echo "🌱 Seeding database..."
-	python manage.py seed --sample-data
+	python scripts/utils/manage.py seed --sample-data
 	@echo "✅ Database seeded"
 
 reset:
@@ -84,14 +84,14 @@ reset:
 	docker-compose down -v
 	docker-compose up -d postgres redis
 	sleep 5
-	python manage.py migrate
-	python manage.py seed --sample-data
+	python scripts/utils/manage.py migrate
+	python scripts/utils/manage.py seed --sample-data
 	@echo "✅ Reset complete"
 
 # Development commands
 dev: docker-services
 	@echo "🚀 Starting development environment..."
-	python manage.py runserver --reload
+	python scripts/utils/manage.py runserver --reload
 
 serve:
 	@echo "🚀 Starting API server..."
@@ -99,24 +99,24 @@ serve:
 
 shell:
 	@echo "🐚 Opening interactive shell..."
-	python manage.py shell
+	python scripts/utils/manage.py shell
 
 # Testing commands
 test:
 	@echo "🧪 Running all tests with coverage..."
-	python manage.py test --coverage --verbose
+	python scripts/utils/manage.py test --coverage --verbose
 
 test-unit:
 	@echo "🧪 Running unit tests..."
-	python manage.py test --unit
+	python scripts/utils/manage.py test --unit
 
 test-int:
 	@echo "🧪 Running integration tests..."
-	python manage.py test --integration
+	python scripts/utils/manage.py test --integration
 
 test-e2e:
 	@echo "🧪 Running end-to-end tests..."
-	python manage.py test --e2e
+	python scripts/utils/manage.py test --e2e
 
 coverage:
 	@echo "📊 Generating coverage report..."
@@ -126,11 +126,11 @@ coverage:
 # Benchmarking and validation
 benchmark:
 	@echo "⚡ Running performance benchmarks..."
-	python manage.py benchmark
+	python scripts/utils/manage.py benchmark
 
 benchmark-baseline:
 	@echo "⚡ Setting new baseline..."
-	python manage.py benchmark --save-baseline
+	python scripts/utils/manage.py benchmark --save-baseline
 
 validate:
 	@echo "✔️  Validating all claims..."
@@ -143,7 +143,7 @@ validate-full:
 # Code quality
 lint:
 	@echo "🔍 Running linters..."
-	python manage.py lint --check
+	python scripts/utils/manage.py lint --check
 
 format:
 	@echo "✨ Formatting code..."
@@ -201,7 +201,7 @@ logs:
 
 status:
 	@echo "📊 Service status..."
-	python manage.py status
+	python scripts/utils/manage.py status
 
 metrics:
 	@echo "📈 Viewing metrics..."
@@ -210,16 +210,16 @@ metrics:
 # Production
 prod: test lint
 	@echo "🏭 Building for production..."
-	python manage.py build all
+	python scripts/utils/manage.py build all
 	@echo "✅ Production build complete"
 
 deploy:
 	@echo "🚀 Deploying to production..."
-	python manage.py deploy --environment production
+	python scripts/utils/manage.py deploy --environment production
 
 deploy-staging:
 	@echo "🚀 Deploying to staging..."
-	python manage.py deploy --environment staging --dry-run
+	python scripts/utils/manage.py deploy --environment staging --dry-run
 
 # Utilities
 clean:
@@ -261,7 +261,7 @@ full-check: install lint test benchmark validate
 env:
 	@echo "🔧 Setting up environment..."
 	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
+		cp config/environments/.env.example .env; \
 		echo "Created .env file - please update with your values"; \
 	else \
 		echo ".env file already exists"; \

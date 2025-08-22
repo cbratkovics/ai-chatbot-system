@@ -193,7 +193,7 @@ cd ai-chatbot-system
 
 2. Set up environment variables:
 ```bash
-cp .env.example .env
+cp config/environments/.env.example .env
 # Edit .env with your configuration
 ```
 
@@ -204,7 +204,7 @@ docker-compose up -d
 
 4. Run database migrations:
 ```bash
-python manage.py migrate
+python scripts/utils/manage.py migrate
 ```
 
 5. Access the application:
