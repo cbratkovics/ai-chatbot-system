@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from ..providers.base_provider import BaseProvider, CompletionResponse, Message, ModelConfig, ProviderStatus
 from ..providers.openai_adapter import OpenAIAdapter
-from ..providers.anthropic_adapter import AnthropicAdapter
+from ..providers.anthropic_adapter import AnthropicAdapter as ProviderB
 from ..providers.llama_adapter import LlamaAdapter
 
 
@@ -70,9 +70,9 @@ class ModelRouter:
         "gpt-4-turbo-preview": {"max_complexity": QueryComplexity.EXPERT, "cost": 0.04, "latency": 2000},
         "gpt-4": {"max_complexity": QueryComplexity.EXPERT, "cost": 0.09, "latency": 3000},
         "gpt-3.5-turbo": {"max_complexity": QueryComplexity.MODERATE, "cost": 0.002, "latency": 1000},
-        "claude-3-opus": {"max_complexity": QueryComplexity.EXPERT, "cost": 0.09, "latency": 2500},
-        "claude-3-sonnet": {"max_complexity": QueryComplexity.COMPLEX, "cost": 0.018, "latency": 1500},
-        "claude-3-haiku": {"max_complexity": QueryComplexity.MODERATE, "cost": 0.00138, "latency": 800},
+        "model-3-opus": {"max_complexity": QueryComplexity.EXPERT, "cost": 0.09, "latency": 2500},
+        "model-3-sonnet": {"max_complexity": QueryComplexity.COMPLEX, "cost": 0.018, "latency": 1500},
+        "model-3-haiku": {"max_complexity": QueryComplexity.MODERATE, "cost": 0.00138, "latency": 800},
         "llama3": {"max_complexity": QueryComplexity.MODERATE, "cost": 0.0002, "latency": 500},
         "llama3:70b": {"max_complexity": QueryComplexity.COMPLEX, "cost": 0.0006, "latency": 1200},
     }
@@ -405,7 +405,7 @@ class ModelRouter:
     async def _route_failover(self, model_config: ModelConfig, complexity: QueryComplexity) -> RoutingDecision:
         """Failover routing with priority order."""
         # Priority order for failover
-        priority_order = ["OpenAI", "Anthropic", "Llama"]
+        priority_order = ["OpenAI", "ProviderB", "Llama"]
 
         for provider_name in priority_order:
             if provider_name not in self.providers:
