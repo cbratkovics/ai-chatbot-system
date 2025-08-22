@@ -160,6 +160,48 @@ app/
     └── timeout_manager.py    # Deadline propagation
 ```
 
+### Repository Structure
+
+```
+ai-chatbot-system/
+├── config/                    # All configuration files
+│   ├── docker/               # Docker configurations
+│   │   ├── compose/          # Docker compose files
+│   │   └── dockerfiles/      # Dockerfile variants
+│   ├── requirements/         # Python dependencies
+│   │   ├── base.txt         # Core dependencies
+│   │   ├── dev.txt          # Development deps
+│   │   └── prod.txt         # Production deps
+│   ├── environments/         # Environment configs
+│   │   ├── .env.example     # Environment template
+│   │   └── render.yaml      # Render deployment
+│   └── ci/                   # CI/CD configurations
+│       └── verify_demo_ci.sh # CI verification
+├── docs/                     # Comprehensive documentation
+│   ├── architecture/         # System design docs
+│   ├── guides/              # How-to guides
+│   ├── portfolio/           # Portfolio showcase
+│   ├── security/            # Security documentation
+│   └── performance/         # Performance guides
+├── api/                      # Backend API (FastAPI)
+├── frontend/                 # Frontend (Next.js)
+├── tests/                    # Test suites
+│   ├── unit/                # Unit tests
+│   ├── integration/         # Integration tests
+│   ├── e2e/                 # End-to-end tests
+│   └── load_testing/        # Performance tests
+├── benchmarks/               # Performance benchmarks
+├── monitoring/               # Observability stack
+│   ├── grafana/             # Dashboards
+│   └── prometheus/          # Metrics & alerts
+├── scripts/                  # Utility scripts
+│   ├── setup/               # Setup scripts
+│   ├── deploy/              # Deployment scripts
+│   └── utils/               # Various utilities
+└── infrastructure/           # IaC configurations
+    └── terraform/           # Terraform modules
+```
+
 ### Technology Stack
 
 - **Backend**: Python 3.11+, FastAPI, Pydantic, SQLAlchemy

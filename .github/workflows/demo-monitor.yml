@@ -32,8 +32,8 @@ jobs:
           fi
           
           # Count dependencies
-          if [ -f requirements.txt ]; then
-            dep_count=$(grep -c "^[^#]" requirements.txt || echo "0")
+          if [ -f config/requirements/base.txt ]; then
+            dep_count=$(grep -c "^[^#]" config/requirements/base.txt || echo "0")
             echo "Python dependencies: $dep_count"
             if [ $dep_count -gt 50 ]; then
               echo "WARNING: Too many Python dependencies ($dep_count)"
@@ -42,8 +42,8 @@ jobs:
           
           # Check Docker build time (estimate)
           echo "Checking Dockerfile complexity..."
-          if [ -f Dockerfile.demo ]; then
-            layers=$(grep -c "^RUN\|^COPY\|^ADD" Dockerfile.demo || echo "0")
+          if [ -f config/docker/dockerfiles/Dockerfile.demo ]; then
+            layers=$(grep -c "^RUN\|^COPY\|^ADD" config/docker/dockerfiles/Dockerfile.demo || echo "0")
             echo "Docker layers: $layers"
             if [ $layers -gt 15 ]; then
               echo "WARNING: Too many Docker layers ($layers)"
@@ -68,9 +68,9 @@ jobs:
         run: |
           # Simulate setup time check
           echo "Validating setup script..."
-          if [ -f setup_demo.sh ]; then
+          if [ -f scripts/setup/setup_demo.sh ]; then
             # Count major operations in setup script
-            operations=$(grep -c "docker\|npm\|pip\|build" setup_demo.sh || echo "0")
+            operations=$(grep -c "docker\|npm\|pip\|build" scripts/setup/setup_demo.sh || echo "0")
             echo "Setup operations: $operations"
             
             if [ $operations -gt 10 ]; then

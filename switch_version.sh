@@ -1,1 +1,0 @@
-scripts/utils/switch_version.sh

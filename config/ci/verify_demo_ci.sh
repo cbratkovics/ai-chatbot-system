@@ -15,12 +15,12 @@ echo -e "\n${YELLOW}Checking required files...${NC}"
 required_files=(
     ".github/workflows/demo-ci.yml"
     ".github/workflows/demo-monitor.yml"
-    "Dockerfile.demo"
+    "config/docker/dockerfiles/Dockerfile.demo"
     "frontend/Dockerfile.demo"
-    "docker-compose.demo.yml"
-    "setup_demo.sh"
-    "README_DEMO.md"
-    ".env.example"
+    "config/docker/compose/docker-compose.demo.yml"
+    "scripts/setup/setup_demo.sh"
+    "docs/guides/README_DEMO.md"
+    "config/environments/.env.example"
 )
 
 all_present=true
