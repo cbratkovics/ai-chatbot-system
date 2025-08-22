@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Check for CI mode
+CI_MODE=false
+if [ "$1" = "--ci-mode" ]; then
+    CI_MODE=true
+fi
+
 echo "AI Chatbot Demo - Quick Setup"
 echo "================================"
 
@@ -15,9 +21,11 @@ fi
 if [ ! -f .env ]; then
     cp .env.example .env
     echo "Created .env file"
-    echo "WARNING: Please add your API keys to .env file:"
-    echo "   - OPENAI_API_KEY"
-    echo "   - ANTHROPIC_API_KEY (optional)"
+    if [ "$CI_MODE" = false ]; then
+        echo "WARNING: Please add your API keys to .env file:"
+        echo "   - OPENAI_API_KEY"
+        echo "   - ANTHROPIC_API_KEY (optional)"
+    fi
 fi
 
 # Start services
