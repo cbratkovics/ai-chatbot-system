@@ -1,0 +1,16 @@
+# Create template file
+cat > ~/.gitmessage << 'EOF'
+# <type>(<scope>): <subject> (max 50 chars)
+
+# <body> (optional, wrap at 72 chars)
+# What changed and why?
+
+# <footer> (optional)
+# Closes #issue-number
+
+# Types: feat, fix, docs, style, refactor, test, chore
+# Example: feat(auth): add password reset functionality
+EOF
+
+# Set as default template
+git config --global commit.template ~/.gitmessage

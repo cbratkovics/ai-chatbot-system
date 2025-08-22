@@ -4,22 +4,35 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.env
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.venv/
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
+*.cover
 htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Jupyter Notebooks
 *.ipynb_checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
 
 # Environment variables and secrets
 .env
 .env.*
+.env.local
+.env.production
+.env.development
+.env.test
 !.env.example
 secrets/
 *.secret
@@ -60,8 +73,31 @@ Thumbs.db
 
 # Docker
 *.log
+postgres_data/
 
 # Monitoring data
 prometheus_data/
 grafana_data/
 redis_data/
+
+# Demo specific
+test_venv/
+backend/test_venv/
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+logs/
+*.log.*
+
+# Test reports
+test-results/
+test-reports/

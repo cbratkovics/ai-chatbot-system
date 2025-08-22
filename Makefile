@@ -1,23 +1,22 @@
-# AI Chatbot System Makefile
-# Provides quick commands for common development tasks
+.PHONY: help install dev-install test lint format run docker-build docker-up docker-down clean migrate docs
 
-.PHONY: help install test benchmark validate serve docker clean lint migrate setup dev prod
+# Variables
+PYTHON := python3
+PIP := pip3
+DOCKER_COMPOSE := docker-compose -f infrastructure/docker/docker-compose.yml
+BACKEND_DIR := backend
+FRONTEND_DIR := frontend
 
-# Default target - show help
-help:
-	@echo "AI Chatbot System - Available Commands"
-	@echo "======================================"
+# Colors for output
+RED := \033[0;31m
+GREEN := \033[0;32m
+YELLOW := \033[1;33m
+NC := \033[0m # No Color
+
+help: ## Show this help message
+	@echo "$(GREEN)AI Chatbot System - Makefile Commands$(NC)"
 	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  make setup       - Complete initial setup (install deps, init DB, etc.)"
-	@echo "  make install     - Install all dependencies"
-	@echo "  make migrate     - Run database migrations"
-	@echo "  make seed        - Seed database with sample data"
-	@echo ""
-	@echo "Development:"
-	@echo "  make dev         - Start development environment"
-	@echo "  make serve       - Start development server"
-	@echo "  make shell       - Open interactive Python shell"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)%-20s$(NC) %s\n", $$1, $$2}'
 	@echo "  make lint        - Run code linters and formatters"
 	@echo "  make format      - Auto-format code"
 	@echo ""
