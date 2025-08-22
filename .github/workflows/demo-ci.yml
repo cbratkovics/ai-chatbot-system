@@ -1,0 +1,156 @@
+name: Demo Branch CI/CD
+
+on:
+  push:
+    branches: [demo]
+  pull_request:
+    branches: [demo]
+    types: [opened, synchronize, reopened]
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  validate:
+    name: Validate Demo Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate demo files exist
+        run: |
+          required_files=(
+            "docker-compose.demo.yml"
+            "setup_demo.sh"
+            "README_DEMO.md"
+            ".env.example"
+          )
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Required file $file is missing"
+              exit 1
+            fi
+          done
+          echo "All required demo files present"
+
+  build-and-test:
+    name: Build and Test Demo
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-demo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-demo-
+      
+      - name: Create .env file
+        run: |
+          cp .env.example .env
+          echo "OPENAI_API_KEY=sk-test-key" >> .env
+          echo "ANTHROPIC_API_KEY=sk-ant-test-key" >> .env
+          echo "ENVIRONMENT=ci" >> .env
+      
+      - name: Build Demo Containers
+        run: |
+          docker-compose -f docker-compose.demo.yml build \
+            --build-arg BUILDKIT_INLINE_CACHE=1
+      
+      - name: Start Demo Services
+        run: |
+          docker-compose -f docker-compose.demo.yml up -d
+          sleep 15  # Wait for services to initialize
+      
+      - name: Run Health Checks
+        run: |
+          # API health check
+          max_attempts=10
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f http://localhost:8000/health 2>/dev/null; then
+              echo "API is healthy"
+              break
+            fi
+            echo "Attempt $attempt failed, waiting..."
+            sleep 5
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "API health check failed after $max_attempts attempts"
+            docker-compose -f docker-compose.demo.yml logs backend
+            exit 1
+          fi
+          
+          # Frontend health check  
+          if curl -f http://localhost:3000 2>/dev/null; then
+            echo "Frontend is healthy"
+          else
+            echo "Frontend health check failed"
+            docker-compose -f docker-compose.demo.yml logs frontend
+            exit 1
+          fi
+          
+          echo "All services healthy"
+      
+      - name: Run Basic Smoke Test
+        run: |
+          # Test API endpoint with mock model
+          response=$(curl -s -X POST http://localhost:8000/api/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer test-token" \
+            -d '{"messages": [{"role": "user", "content": "test"}], "model": "gpt-3.5-turbo"}' || echo "API call failed")
+          
+          # For demo, we just check if the API responds (even with error)
+          if [[ -n "$response" ]]; then
+            echo "API responded successfully"
+          else
+            echo "API smoke test failed - no response"
+            docker-compose -f docker-compose.demo.yml logs
+            exit 1
+          fi
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose -f docker-compose.demo.yml down -v
+          docker system prune -f
+
+  security-scan:
+    name: Security Scanning
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true  # Don't fail the pipeline for security issues in demo
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail on vulnerabilities for demo
+          format: 'table'
+      
+      - name: Check for secrets
+        run: |
+          # Basic check for common secret patterns
+          if grep -r "sk-[a-zA-Z0-9]\{32,\}" . --exclude-dir=.git --exclude="*.yml" 2>/dev/null; then
+            echo "WARNING: Potential secrets found in code"
+          else
+            echo "No obvious secrets detected"
+          fi

@@ -1,0 +1,81 @@
+name: Demo Branch Monitoring
+
+on:
+  workflow_run:
+    workflows: ["Demo Branch CI/CD"]
+    types: [completed]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  check-metrics:
+    if: ${{ github.event_name == 'schedule' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: demo
+      
+      - name: Check demo complexity metrics
+        run: |
+          echo "=== Demo Branch Metrics ==="
+          
+          # Count files
+          file_count=$(find . -type f -not -path "./.git/*" | wc -l)
+          echo "Total files: $file_count"
+          
+          if [ $file_count -gt 200 ]; then
+            echo "WARNING: Demo branch has $file_count files (target: <150)"
+          else
+            echo "File count is within target"
+          fi
+          
+          # Count dependencies
+          if [ -f requirements.txt ]; then
+            dep_count=$(grep -c "^[^#]" requirements.txt || echo "0")
+            echo "Python dependencies: $dep_count"
+            if [ $dep_count -gt 50 ]; then
+              echo "WARNING: Too many Python dependencies ($dep_count)"
+            fi
+          fi
+          
+          # Check Docker build time (estimate)
+          echo "Checking Dockerfile complexity..."
+          if [ -f Dockerfile.demo ]; then
+            layers=$(grep -c "^RUN\|^COPY\|^ADD" Dockerfile.demo || echo "0")
+            echo "Docker layers: $layers"
+            if [ $layers -gt 15 ]; then
+              echo "WARNING: Too many Docker layers ($layers)"
+            fi
+          fi
+          
+          # Generate metrics summary
+          cat > metrics_summary.txt << EOF
+          Demo Branch Metrics Report
+          ==========================
+          Date: $(date)
+          Files: $file_count (target: <150)
+          Python Deps: $dep_count (target: <35)
+          Docker Layers: $layers (target: <15)
+          
+          Status: $([ $file_count -lt 200 ] && [ $dep_count -lt 50 ] && echo "HEALTHY" || echo "NEEDS ATTENTION")
+          EOF
+          
+          cat metrics_summary.txt
+      
+      - name: Check setup time
+        run: |
+          # Simulate setup time check
+          echo "Validating setup script..."
+          if [ -f setup_demo.sh ]; then
+            # Count major operations in setup script
+            operations=$(grep -c "docker\|npm\|pip\|build" setup_demo.sh || echo "0")
+            echo "Setup operations: $operations"
+            
+            if [ $operations -gt 10 ]; then
+              echo "WARNING: Setup script may take longer than 5 minutes"
+            else
+              echo "Setup script appears optimized"
+            fi
+          fi
