@@ -1,5 +1,13 @@
 # Multi-Tenant AI Chat Platform
 
+[![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://docker.com)
+[![Demo](https://img.shields.io/badge/Demo-Available-success)](../../tree/demo)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+[**Try Demo (5-min setup)**](../../tree/demo) | [**Full Docs**](docs/README.md) | [**Live Demo**](https://demo.example.com)
+
 ## Platform Metrics
 - **99.5% uptime** under production load
 - **<200ms P95** end-to-end latency
