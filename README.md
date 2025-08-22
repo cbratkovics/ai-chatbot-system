@@ -507,7 +507,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Documentation**: [docs.ai-platform.com](https://docs.ai-platform.com)
 - **Issues**: [GitHub Issues](https://github.com/cbratkovics/ai-chatbot-system/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/cbratkovics/ai-chatbot-system/discussions)
-- **Security**: security@ai-platform.com
 
 ## Acknowledgments
 
