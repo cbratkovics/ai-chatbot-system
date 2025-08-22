@@ -29,9 +29,9 @@ The demo branch has a dedicated CI/CD pipeline optimized for quick setup and val
 ## Docker Configuration
 
 ### Files
-- `Dockerfile.demo`: Simplified single-stage build for backend
+- `config/docker/dockerfiles/Dockerfile.demo`: Simplified single-stage build for backend
 - `frontend/Dockerfile.demo`: Optimized frontend build
-- `docker-compose.demo.yml`: Demo-specific compose configuration
+- `config/docker/compose/docker-compose.demo.yml`: Demo-specific compose configuration
 
 ### Optimization Strategies
 1. Single-stage builds where possible
@@ -42,7 +42,7 @@ The demo branch has a dedicated CI/CD pipeline optimized for quick setup and val
 
 ## Setup Script
 
-The `setup_demo.sh` script supports two modes:
+The `scripts/setup/setup_demo.sh` script supports two modes:
 - **Normal Mode**: Interactive setup with user prompts
 - **CI Mode**: Automated setup for testing (`--ci-mode` flag)
 
@@ -53,10 +53,10 @@ The `setup_demo.sh` script supports two modes:
 git checkout demo
 
 # 2. Run setup
-./setup_demo.sh
+./scripts/setup/setup_demo.sh
 
 # 3. Verify services
-docker-compose -f docker-compose.demo.yml ps
+docker-compose -f config/docker/compose/docker-compose.demo.yml ps
 
 # 4. Check health
 curl http://localhost:8000/health

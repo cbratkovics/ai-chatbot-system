@@ -1,1 +1,0 @@
-config/ci/verify_demo_ci.sh

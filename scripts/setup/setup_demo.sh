@@ -19,7 +19,7 @@ fi
 
 # Setup environment
 if [ ! -f .env ]; then
-    cp .env.example .env
+    cp config/environments/.env.example .env
     echo "Created .env file"
     if [ "$CI_MODE" = false ]; then
         echo "WARNING: Please add your API keys to .env file:"
@@ -30,7 +30,7 @@ fi
 
 # Start services
 echo "Building and starting services..."
-docker-compose -f docker-compose.demo.yml up -d --build
+docker-compose -f config/docker/compose/docker-compose.demo.yml up -d --build
 
 # Wait for services
 echo "Waiting for services to be ready..."

@@ -22,10 +22,10 @@ jobs:
       - name: Validate demo files exist
         run: |
           required_files=(
-            "docker-compose.demo.yml"
-            "setup_demo.sh"
-            "README_DEMO.md"
-            ".env.example"
+            "config/docker/compose/docker-compose.demo.yml"
+            "scripts/setup/setup_demo.sh"
+            "docs/guides/README_DEMO.md"
+            "config/environments/.env.example"
           )
           for file in "${required_files[@]}"; do
             if [ ! -f "$file" ]; then
@@ -58,19 +58,19 @@ jobs:
       
       - name: Create .env file
         run: |
-          cp .env.example .env
+          cp config/environments/.env.example .env
           echo "OPENAI_API_KEY=sk-test-key" >> .env
           echo "ANTHROPIC_API_KEY=sk-ant-test-key" >> .env
           echo "ENVIRONMENT=ci" >> .env
       
       - name: Build Demo Containers
         run: |
-          docker-compose -f docker-compose.demo.yml build \
+          docker-compose -f config/docker/compose/docker-compose.demo.yml build \
             --build-arg BUILDKIT_INLINE_CACHE=1
       
       - name: Start Demo Services
         run: |
-          docker-compose -f docker-compose.demo.yml up -d
+          docker-compose -f config/docker/compose/docker-compose.demo.yml up -d
           sleep 15  # Wait for services to initialize
       
       - name: Run Health Checks
@@ -90,7 +90,7 @@ jobs:
           
           if [ $attempt -gt $max_attempts ]; then
             echo "API health check failed after $max_attempts attempts"
-            docker-compose -f docker-compose.demo.yml logs backend
+            docker-compose -f config/docker/compose/docker-compose.demo.yml logs backend
             exit 1
           fi
           
@@ -99,7 +99,7 @@ jobs:
             echo "Frontend is healthy"
           else
             echo "Frontend health check failed"
-            docker-compose -f docker-compose.demo.yml logs frontend
+            docker-compose -f config/docker/compose/docker-compose.demo.yml logs frontend
             exit 1
           fi
           
@@ -118,14 +118,14 @@ jobs:
             echo "API responded successfully"
           else
             echo "API smoke test failed - no response"
-            docker-compose -f docker-compose.demo.yml logs
+            docker-compose -f config/docker/compose/docker-compose.demo.yml logs
             exit 1
           fi
       
       - name: Cleanup
         if: always()
         run: |
-          docker-compose -f docker-compose.demo.yml down -v
+          docker-compose -f config/docker/compose/docker-compose.demo.yml down -v
           docker system prune -f
 
   security-scan:
