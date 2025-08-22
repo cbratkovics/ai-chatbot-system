@@ -69,10 +69,7 @@ def sample_chat_request():
         "user_id": fake.uuid4(),
         "tenant_id": fake.uuid4(),
         "session_id": fake.uuid4(),
-        "metadata": {
-            "source": "web",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        "metadata": {"source": "web", "timestamp": datetime.utcnow().isoformat()},
     }
 
 
@@ -89,16 +86,12 @@ def sample_chat_response():
                 "index": 0,
                 "message": {
                     "role": "assistant",
-                    "content": "I don't have access to real-time weather data. Please check a weather service for current conditions."
+                    "content": "I don't have access to real-time weather data. Please check a weather service for current conditions.",
                 },
-                "finish_reason": "stop"
+                "finish_reason": "stop",
             }
         ],
-        "usage": {
-            "prompt_tokens": 15,
-            "completion_tokens": 25,
-            "total_tokens": 40
-        }
+        "usage": {"prompt_tokens": 15, "completion_tokens": 25, "total_tokens": 40},
     }
 
 
@@ -121,11 +114,7 @@ def mock_anthropic_client():
 @pytest.fixture
 def auth_headers():
     """Sample authentication headers."""
-    return {
-        "Authorization": f"Bearer {fake.sha256()}",
-        "X-Tenant-ID": fake.uuid4(),
-        "X-Request-ID": fake.uuid4()
-    }
+    return {"Authorization": f"Bearer {fake.sha256()}", "X-Tenant-ID": fake.uuid4(), "X-Request-ID": fake.uuid4()}
 
 
 @pytest.fixture
@@ -149,7 +138,7 @@ def performance_metrics():
         "concurrent_users": 100,
         "cache_hit_rate": 0.3,
         "requests_per_second": 1000,
-        "error_rate": 0.01
+        "error_rate": 0.01,
     }
 
 
@@ -160,19 +149,15 @@ def tenant_config():
         "tenant_id": fake.uuid4(),
         "name": fake.company(),
         "tier": "enterprise",
-        "rate_limits": {
-            "requests_per_minute": 1000,
-            "tokens_per_day": 1000000,
-            "concurrent_connections": 50
-        },
+        "rate_limits": {"requests_per_minute": 1000, "tokens_per_day": 1000000, "concurrent_connections": 50},
         "features": {
             "semantic_cache": True,
             "model_switching": True,
             "custom_models": ["gpt-4", "claude-3"],
-            "data_retention_days": 90
+            "data_retention_days": 90,
         },
         "created_at": datetime.utcnow().isoformat(),
-        "status": "active"
+        "status": "active",
     }
 
 
@@ -183,10 +168,7 @@ def mock_embeddings():
         "text": "What is the weather like today?",
         "embedding": [fake.random.random() for _ in range(1536)],
         "model": "text-embedding-ada-002",
-        "metadata": {
-            "timestamp": datetime.utcnow().isoformat(),
-            "tokens": 8
-        }
+        "metadata": {"timestamp": datetime.utcnow().isoformat(), "tokens": 8},
     }
 
 
@@ -200,12 +182,7 @@ async def async_http_client():
 @pytest.fixture
 def rate_limit_config():
     """Rate limiting configuration."""
-    return {
-        "window_seconds": 60,
-        "max_requests": 100,
-        "burst_size": 20,
-        "strategy": "token_bucket"
-    }
+    return {"window_seconds": 60, "max_requests": 100, "burst_size": 20, "strategy": "token_bucket"}
 
 
 @pytest.fixture
@@ -227,33 +204,30 @@ def cache_config():
         "max_size_mb": 100,
         "eviction_policy": "lru",
         "similarity_threshold": 0.85,
-        "embedding_dimension": 1536
+        "embedding_dimension": 1536,
     }
 
 
 @pytest.fixture
 def load_test_data():
     """Load test data from fixtures."""
+
     def _load(filename):
         filepath = os.path.join(os.path.dirname(__file__), "fixtures", filename)
         if os.path.exists(filepath):
-            with open(filepath, 'r') as f:
+            with open(filepath, "r") as f:
                 return json.load(f)
         return {}
+
     return _load
 
 
 @pytest.fixture
 def mock_stream_response():
     """Mock streaming response for SSE/WebSocket testing."""
+
     async def _stream():
-        chunks = [
-            "Hello",
-            " from",
-            " the",
-            " AI",
-            " assistant!"
-        ]
+        chunks = ["Hello", " from", " the", " AI", " assistant!"]
         for chunk in chunks:
             await asyncio.sleep(0.01)
             yield {
@@ -261,12 +235,9 @@ def mock_stream_response():
                 "object": "chat.completion.chunk",
                 "created": int(datetime.utcnow().timestamp()),
                 "model": "gpt-4",
-                "choices": [{
-                    "index": 0,
-                    "delta": {"content": chunk},
-                    "finish_reason": None
-                }]
+                "choices": [{"index": 0, "delta": {"content": chunk}, "finish_reason": None}],
             }
+
     return _stream
 
 
@@ -281,7 +252,7 @@ def environment_variables(monkeypatch):
         "OPENAI_API_KEY": "test-openai-key",
         "ANTHROPIC_API_KEY": "test-anthropic-key",
         "JWT_SECRET": fake.sha256(),
-        "ENCRYPTION_KEY": fake.sha256()
+        "ENCRYPTION_KEY": fake.sha256(),
     }
     for key, value in env_vars.items():
         monkeypatch.setenv(key, value)
