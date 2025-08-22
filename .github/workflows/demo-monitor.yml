@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: demo
+          ref: main  # Changed from demo to main
       
       - name: Check demo complexity metrics
         run: |
