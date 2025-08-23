@@ -7,7 +7,7 @@ python-multipart==0.0.6
 
 # AI/ML providers  
 openai==1.6.1
-anthropic==0.8.1
+# Provider packages for AI models
 tiktoken==0.5.2
 
 # Infrastructure
