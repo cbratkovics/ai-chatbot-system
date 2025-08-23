@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     redis_max_connections: int = Field(default=100, env="REDIS_MAX_CONNECTIONS")
     
     # Provider Configuration
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
+    provider_a_api_key: Optional[str] = Field(default=None, env="PROVIDER_A_API_KEY")
+    provider_b_api_key: Optional[str] = Field(default=None, env="PROVIDER_B_API_KEY")
     provider_timeout: int = Field(default=30, env="PROVIDER_TIMEOUT")
     max_retries: int = Field(default=3, env="MAX_RETRIES")
     

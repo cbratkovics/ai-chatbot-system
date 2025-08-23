@@ -100,7 +100,7 @@ app = FastAPI(
     
     ## Features
     
-    * **Multi-Provider Support**: OpenAI, Anthropic with intelligent failover
+    * **Multi-Provider Support**: Multiple providers with intelligent failover
     * **Real-time Chat**: WebSocket connections with 100+ concurrent support
     * **Semantic Caching**: 42% cache hit rate for improved performance
     * **Multi-Tenancy**: Full tenant isolation and resource management
@@ -188,8 +188,8 @@ async def health_check():
             "database": {"status": "healthy", "connection_pool": "available"}, 
             "redis": {"status": "healthy", "latency_ms": 0.8},
             "providers": {
-                "openai": {"status": "healthy", "latency_ms": 245},
-                "anthropic": {"status": "healthy", "latency_ms": 312}
+                "provider_a": {"status": "healthy", "latency_ms": 245},
+                "provider_b": {"status": "healthy", "latency_ms": 312}
             }
         },
         "metrics": {
@@ -215,12 +215,12 @@ async def get_api_info():
             "environment": "production" if not settings.debug else "development"
         },
         "capabilities": {
-            "providers": ["openai", "anthropic"],
+            "providers": ["provider_a", "provider_b"],
             "models": [
-                "gpt-4",
-                "gpt-3.5-turbo", 
-                "claude-3-opus",
-                "claude-3-sonnet"
+                "model-4",
+                "model-3.5-turbo", 
+                "model-3-opus",
+                "model-3-sonnet"
             ],
             "features": [
                 "streaming_responses",
