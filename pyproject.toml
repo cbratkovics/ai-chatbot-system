@@ -41,11 +41,11 @@ tenacity = "^8.2.3"
 aiofiles = "^23.2.1"
 
 # AI/ML Core (optional for flexibility)
-openai = {version = "^1.6.1", optional = true}
+# openai = {version = "^1.6.1", optional = true}
 tiktoken = {version = "^0.5.2", optional = true}
-langchain = {version = "^0.1.0", optional = true}
-langchain-openai = {version = "^0.0.5", optional = true}
-langchain-community = {version = "^0.0.10", optional = true}
+# langchain = {version = "^0.1.0", optional = true}
+# langchain-openai = {version = "^0.0.5", optional = true}
+# langchain-community = {version = "^0.0.10", optional = true}
 
 # Data Processing
 numpy = "^1.26.2"
