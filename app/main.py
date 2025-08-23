@@ -1,24 +1,40 @@
-"""Main application entry point."""
-
+"""Main FastAPI application."""
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
-app = FastAPI(title="AI Chatbot System", version="1.0.0")
-
-
-@app.get("/")
-async def root():
-    """Root endpoint."""
-    return {"message": "AI Chatbot System API"}
+app = FastAPI(
+    title="System API",
+    description="Core system API for chatbot functionality",
+    version="1.0.0"
+)
 
 
 @app.get("/health")
-async def health():
+def health_check():
     """Health check endpoint."""
-    return JSONResponse(status_code=200, content={"status": "healthy", "service": "ai-chatbot-system"})
+    return {
+        "status": "healthy",
+        "components": {
+            "api": "operational",
+            "database": "connected"
+        }
+    }
 
 
-if __name__ == "__main__":
-    import uvicorn
+@app.get("/")
+def root():
+    """Root endpoint."""
+    return {
+        "message": "System API",
+        "version": "1.0.0",
+        "status": "running"
+    }
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.get("/info")
+def get_info():
+    """Get system information."""
+    return {
+        "system": "Chatbot System",
+        "framework": "FastAPI",
+        "python_version": "3.11+"
+    }
