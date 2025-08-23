@@ -70,19 +70,19 @@ ujson = {version = "^5.9.0", optional = true}
 optional = true
 
 [tool.poetry.group.ml-gpu.dependencies]
-torch = {version = ">=2.1.0,<2.3.0", source = "pytorch-gpu"}
+# torch = {version = ">=2.1.0,<2.3.0", source = "pytorch-gpu"}
 transformers = "^4.36.0"
 accelerate = "^0.25.0"
-sentence-transformers = "^2.2.2"
+# sentence-transformers = "^2.2.2"
 bitsandbytes = "^0.41.3"
 
 [tool.poetry.group.ml-cpu]
 optional = true
 
 [tool.poetry.group.ml-cpu.dependencies]
-torch = {version = ">=2.1.0,<2.3.0", source = "pytorch-cpu", markers = "sys_platform == 'linux' or sys_platform == 'darwin'"}
+# torch = {version = ">=2.1.0,<2.3.0", source = "pytorch-cpu", markers = "sys_platform == 'linux' or sys_platform == 'darwin'"}
 onnxruntime = "^1.16.3"
-sentence-transformers = "^2.2.2"
+# sentence-transformers = "^2.2.2"
 
 [tool.poetry.group.dev.dependencies]
 # Testing
