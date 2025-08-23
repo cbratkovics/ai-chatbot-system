@@ -46,7 +46,6 @@ secrets/
 
 # Sealed secrets
 **/sealed-secrets.yaml
-.githooks
 
 # IDE
 .vscode/
