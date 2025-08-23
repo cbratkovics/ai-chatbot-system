@@ -46,6 +46,7 @@ secrets/
 
 # Sealed secrets
 **/sealed-secrets.yaml
+.githooks
 
 # IDE
 .vscode/
@@ -65,6 +66,3 @@ Thumbs.db
 prometheus_data/
 grafana_data/
 redis_data/
-
-# Git hooks (local .git directory is already ignored by default)
-# The .githooks/ directory is intentionally tracked for shared hooks

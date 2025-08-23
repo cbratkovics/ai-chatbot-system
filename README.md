@@ -6,14 +6,14 @@
 [![Demo](https://img.shields.io/badge/Demo-Available-success)](../../tree/demo)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-[**Try Demo (5-min setup)**](../../tree/demo) | [**Full Docs**](docs/README.md) | [**Live Demo**](https://demo.example.com)
+[**Full Docs**](docs/README.md) | [**Live Demo**](https://demo.example.com)
 
 ## Platform Metrics
 - **99.5% uptime** under production load
 - **<200ms P95** end-to-end latency
 - **30% API cost reduction** via semantic caching
 - **100+ concurrent WebSocket connections**
-- **Multi-model orchestration** (OpenAI/Anthropic/Llama)
+- **Multi-model orchestration** (Provider A/Provider B/Llama)
 
 ## Overview
 
@@ -31,7 +31,7 @@ Enterprise-grade SaaS platform implementing production-ready conversational AI w
 - **Usage quotas** with automatic throttling
 
 ### Advanced Capabilities
-- **Multi-Model Support**: OpenAI GPT-4, Anthropic Claude, Llama 3 orchestration
+- **Multi-Model Support**: Provider A Model-4, Provider B Model B, Llama 3 orchestration
 - **Intelligent Routing**: Dynamic model selection based on cost/performance optimization
 - **Semantic Caching**: Vector similarity matching with 30% cost reduction
 - **Real-time Communication**: WebSocket streaming with automatic reconnection
@@ -42,7 +42,7 @@ Enterprise-grade SaaS platform implementing production-ready conversational AI w
 
 ### Core Design Patterns
 - **Strategy Pattern**: Dynamic model selection based on query characteristics
-- **Adapter Pattern**: Unified interface for OpenAI, Anthropic, Llama providers
+- **Adapter Pattern**: Unified interface for Provider A, Provider B, Llama providers
 - **Circuit Breaker**: Automatic failover with exponential backoff
 - **Saga Pattern**: Distributed transaction management across services
 - **Repository Pattern**: Data access abstraction layer
@@ -100,7 +100,7 @@ Enterprise-grade SaaS platform implementing production-ready conversational AI w
 │                      Provider Adapter Layer                          │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐ │
-│  │   OpenAI    │  │  Anthropic  │  │    Llama    │  │   Custom   │ │
+│  │   Provider A    │  │  Provider B  │  │    Llama    │  │   Custom   │ │
 │  │   Adapter   │  │   Adapter   │  │   Adapter   │  │  Providers │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘ │
 └─────────────────────────────┬───────────────────────────────────────┘
@@ -129,8 +129,8 @@ Enterprise-grade SaaS platform implementing production-ready conversational AI w
 ```
 app/
 ├── providers/              # Provider Adapters
-│   ├── openai_adapter.py   # OpenAI GPT integration
-│   ├── anthropic_adapter.py # Claude integration
+│   ├── provider_a_adapter.py   # Provider A Model integration
+│   ├── provider_b_adapter.py # Model B integration
 │   ├── llama_adapter.py    # Llama model integration
 │   └── base_provider.py    # Abstract provider interface
 ├── orchestration/          # Model Orchestration
@@ -261,8 +261,8 @@ Key environment variables:
 
 ```env
 # AI Models
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
+OPENAI_API_KEY=your_provider_a_key
+ANTHROPIC_API_KEY=your_provider_b_key
 LLAMA_API_ENDPOINT=http://localhost:11434
 
 # Multi-tenancy
@@ -304,10 +304,10 @@ Headers:
   X-Tenant-ID: tenant_123
   Authorization: Bearer <token>
 {
-  "model": "gpt-4",
+  "model": "model-4",
   "temperature": 0.7,
   "system_prompt": "You are a helpful assistant",
-  "fallback_model": "claude-3"
+  "fallback_model": "model_b-3"
 }
 
 # Send a message with streaming
@@ -352,8 +352,8 @@ POST /api/v1/tenants
     "tokens_per_minute": 100000
   },
   "model_preferences": {
-    "primary": "gpt-4",
-    "fallback": "claude-3"
+    "primary": "model-4",
+    "fallback": "model_b-3"
   }
 }
 
@@ -362,7 +362,7 @@ PATCH /api/v1/tenants/{tenant_id}/config
 {
   "cache_enabled": true,
   "semantic_cache_threshold": 0.85,
-  "allowed_models": ["gpt-4", "claude-3", "llama-3"]
+  "allowed_models": ["model-4", "model_b-3", "llama-3"]
 }
 ```
 
@@ -557,9 +557,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Documentation**: [docs.ai-platform.com](https://docs.ai-platform.com)
 - **Issues**: [GitHub Issues](https://github.com/cbratkovics/ai-chatbot-system/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/cbratkovics/ai-chatbot-system/discussions)
-
-## Acknowledgments
-
-- OpenAI, Anthropic, and Meta for AI model APIs
-- The open-source community for excellent tools and libraries
-- Contributors and maintainers of this project
