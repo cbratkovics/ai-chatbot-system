@@ -6,7 +6,7 @@ import time
 from typing import Dict, Optional
 from uuid import UUID, uuid4
 
-from api.app.config import settings
+from api.config import settings
 from api.providers import (
     ProviderOrchestrator,
     CompletionRequest,

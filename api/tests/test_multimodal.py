@@ -1,6 +1,6 @@
 import pytest
-from app.services.image_processor import ImageProcessor
-from app.models.chat import Message, TextContent, ImageContent
+from api.services.image_processor import ImageProcessor
+from api.models.chat import Message, TextContent, ImageContent
 import base64
 
 @pytest.mark.asyncio

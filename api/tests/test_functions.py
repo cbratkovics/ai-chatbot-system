@@ -1,7 +1,7 @@
 import pytest
-from app.services.functions.calculator import CalculatorFunction, DataAnalysisFunction
-from app.services.functions.base import function_registry
-from app.services.functions.init_functions import initialize_functions
+from api.services.functions.calculator import CalculatorFunction, DataAnalysisFunction
+from api.services.functions.base import function_registry
+from api.services.functions.init_functions import initialize_functions
 
 @pytest.mark.asyncio
 async def test_calculator_function():

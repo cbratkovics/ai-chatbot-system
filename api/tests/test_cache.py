@@ -10,7 +10,7 @@ async def test_semantic_cache_similarity():
         mock_model.encode.return_value = np.array([[1.0, 0.0, 0.0]])
         mock_transformer.return_value = mock_model
         
-        from app.services.cache.semantic_cache import SemanticCache
+        from api.services.cache.semantic_cache import SemanticCache
         cache = SemanticCache(similarity_threshold=0.8)
         
         # Test cosine similarity calculation
@@ -39,7 +39,7 @@ async def test_cache_operations():
         mock_redis_client.set = Mock(return_value=True)
         mock_redis.return_value = mock_redis_client
         
-        from app.services.cache.semantic_cache import SemanticCache
+        from api.services.cache.semantic_cache import SemanticCache
         cache = SemanticCache()
         
         # Test cache miss

@@ -1,6 +1,6 @@
 import tiktoken
 from typing import List, Dict, Union
-from app.models.chat import Message
+from api.models.chat import Message
 
 class TokenCounter:
     def __init__(self):

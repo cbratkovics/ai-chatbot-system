@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from app.models.chat import ChatSession
+from api.models.chat import ChatSession
 import asyncio
 
 class CostCalculator:
