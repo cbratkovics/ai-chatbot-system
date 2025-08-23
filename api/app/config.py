@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
     
     # API Configuration
-    app_name: str = "AI Chatbot System"
+    app_name: str = "Chatbot System"
     app_version: str = "1.0.0"
     debug: bool = Field(default=False, env="DEBUG")
     api_prefix: str = "/api/v1"
