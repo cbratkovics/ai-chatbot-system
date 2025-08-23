@@ -1,40 +1,22 @@
-"""Main FastAPI application."""
+"""Main FastAPI application - Moved to api/app/main.py for proper structure."""
+
+# This file exists for backward compatibility
+# The actual application is now located at api/app/main.py
+
 from fastapi import FastAPI
 
 app = FastAPI(
-    title="System API",
-    description="Core system API for chatbot functionality",
+    title="AI Chatbot System (Legacy Endpoint)",
+    description="Please use the main API at /api/v1",
     version="1.0.0"
 )
 
-
-@app.get("/health")
-def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "components": {
-            "api": "operational",
-            "database": "connected"
-        }
-    }
-
-
 @app.get("/")
 def root():
-    """Root endpoint."""
+    """Legacy root endpoint - redirects to main API."""
     return {
-        "message": "System API",
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-
-@app.get("/info")
-def get_info():
-    """Get system information."""
-    return {
-        "system": "Chatbot System",
-        "framework": "FastAPI",
-        "python_version": "3.11+"
+        "message": "This is a legacy endpoint. Please use the main API at /api/v1",
+        "main_api": "/api/v1",
+        "docs": "/api/v1/docs",
+        "health": "/api/v1/health"
     }
