@@ -1,317 +1,40 @@
-# AI Chatbot System Makefile
-# Provides quick commands for common development tasks
+.PHONY: install test lint format type-check ci-local clean
 
-.PHONY: help install test benchmark validate serve docker clean lint migrate setup dev prod
-
-# Default target - show help
-help:
-	@echo "AI Chatbot System - Available Commands"
-	@echo "======================================"
-	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  make setup       - Complete initial setup (install deps, init DB, etc.)"
-	@echo "  make install     - Install all dependencies"
-	@echo "  make migrate     - Run database migrations"
-	@echo "  make seed        - Seed database with sample data"
-	@echo ""
-	@echo "Development:"
-	@echo "  make dev         - Start development environment"
-	@echo "  make serve       - Start development server"
-	@echo "  make shell       - Open interactive Python shell"
-	@echo "  make lint        - Run code linters and formatters"
-	@echo "  make format      - Auto-format code"
-	@echo ""
-	@echo "Testing & Validation:"
-	@echo "  make test        - Run all tests with coverage"
-	@echo "  make test-unit   - Run unit tests only"
-	@echo "  make test-int    - Run integration tests only"
-	@echo "  make test-e2e    - Run end-to-end tests only"
-	@echo "  make benchmark   - Run performance benchmarks"
-	@echo "  make validate    - Validate all performance claims"
-	@echo ""
-	@echo "Docker & Deployment:"
-	@echo "  make docker      - Build and run with Docker"
-	@echo "  make docker-build - Build Docker images"
-	@echo "  make docker-up   - Start Docker services"
-	@echo "  make docker-down - Stop Docker services"
-	@echo "  make docker-logs - View Docker logs"
-	@echo ""
-	@echo "Production:"
-	@echo "  make prod        - Build for production"
-	@echo "  make deploy      - Deploy to production"
-	@echo ""
-	@echo "Monitoring:"
-	@echo "  make monitoring  - Start monitoring stack (Grafana, Prometheus)"
-	@echo "  make logs        - Tail application logs"
-	@echo "  make status      - Show service status"
-	@echo ""
-	@echo "Utilities:"
-	@echo "  make clean       - Clean generated files and caches"
-	@echo "  make reset       - Reset database and caches"
-	@echo "  make backup      - Backup database"
-	@echo "  make restore     - Restore database from backup"
-
-# Complete initial setup
-setup: install migrate seed
-	@echo "✅ Setup complete! Run 'make dev' to start development"
-
-# Install all dependencies
+# Install all dependencies with Poetry
 install:
-	@echo "📦 Installing Python dependencies..."
-	pip install -r config/requirements/base.txt
-	pip install -r config/requirements/dev.txt
-	@echo "📦 Installing Node.js dependencies..."
-	@if [ -d "frontend" ]; then \
-		cd frontend && npm install; \
-	fi
-	@echo "📦 Installing benchmark tools..."
-	pip install locust pytest pytest-cov black isort flake8 mypy
-	@echo "✅ Dependencies installed"
+	poetry install --with dev
 
-# Database operations
-migrate:
-	@echo "🔄 Running database migrations..."
-	python scripts/utils/manage.py migrate
-	@echo "✅ Migrations complete"
-
-seed:
-	@echo "🌱 Seeding database..."
-	python scripts/utils/manage.py seed --sample-data
-	@echo "✅ Database seeded"
-
-reset:
-	@echo "⚠️  Resetting database and caches..."
-	docker-compose down -v
-	docker-compose up -d postgres redis
-	sleep 5
-	python scripts/utils/manage.py migrate
-	python scripts/utils/manage.py seed --sample-data
-	@echo "✅ Reset complete"
-
-# Development commands
-dev: docker-services
-	@echo "🚀 Starting development environment..."
-	python scripts/utils/manage.py runserver --reload
-
-serve:
-	@echo "🚀 Starting API server..."
-	uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
-
-shell:
-	@echo "🐚 Opening interactive shell..."
-	python scripts/utils/manage.py shell
-
-# Testing commands
+# Run tests
 test:
-	@echo "🧪 Running all tests with coverage..."
-	python scripts/utils/manage.py test --coverage --verbose
+	poetry run pytest tests/ -v
 
-test-unit:
-	@echo "🧪 Running unit tests..."
-	python scripts/utils/manage.py test --unit
+# Run tests with coverage
+test-cov:
+	poetry run pytest tests/ -v --cov=api --cov=app --cov-report=term-missing --cov-report=html
 
-test-int:
-	@echo "🧪 Running integration tests..."
-	python scripts/utils/manage.py test --integration
-
-test-e2e:
-	@echo "🧪 Running end-to-end tests..."
-	python scripts/utils/manage.py test --e2e
-
-coverage:
-	@echo "📊 Generating coverage report..."
-	pytest --cov=api --cov-report=html --cov-report=term
-	@echo "Coverage report: tests/coverage_reports/html/index.html"
-
-# Benchmarking and validation
-benchmark:
-	@echo "⚡ Running performance benchmarks..."
-	python scripts/utils/manage.py benchmark
-
-benchmark-baseline:
-	@echo "⚡ Setting new baseline..."
-	python scripts/utils/manage.py benchmark --save-baseline
-
-validate:
-	@echo "✔️  Validating all claims..."
-	python scripts/validate_claims.py
-
-validate-full:
-	@echo "✔️  Running benchmarks and validating..."
-	python scripts/validate_claims.py --run-benchmarks
-
-# Code quality
+# Lint code
 lint:
-	@echo "🔍 Running linters..."
-	python scripts/utils/manage.py lint --check
+	poetry run flake8 api/ app/ tests/
+	poetry run black --check api/ app/ tests/
+	poetry run isort --check-only api/ app/ tests/
 
+# Format code
 format:
-	@echo "✨ Formatting code..."
-	black api/ tests/ benchmarks/
-	isort api/ tests/ benchmarks/
-	@echo "✅ Code formatted"
+	poetry run black api/ app/ tests/
+	poetry run isort api/ app/ tests/
 
-typecheck:
-	@echo "🔍 Type checking..."
-	mypy api/
+# Type checking
+type-check:
+	poetry run mypy api/ app/ --ignore-missing-imports
 
-security:
-	@echo "🔒 Running security checks..."
-	pip install safety bandit
-	safety check
-	bandit -r api/
+# Run all CI checks locally
+ci-local: lint type-check test
 
-# Docker commands
-docker: docker-build docker-up
-	@echo "✅ Docker environment ready"
-
-docker-build:
-	@echo "🏗️  Building Docker images..."
-	docker-compose build
-
-docker-up:
-	@echo "🚀 Starting Docker services..."
-	docker-compose up -d
-
-docker-down:
-	@echo "🛑 Stopping Docker services..."
-	docker-compose down
-
-docker-logs:
-	@echo "📋 Showing Docker logs..."
-	docker-compose logs -f
-
-docker-services:
-	@echo "🚀 Starting required services..."
-	docker-compose up -d postgres redis
-	@echo "Waiting for services to be ready..."
-	@sleep 5
-
-# Monitoring
-monitoring:
-	@echo "📊 Starting monitoring stack..."
-	docker-compose up -d prometheus grafana jaeger
-	@echo "Grafana: http://localhost:3000 (admin/admin)"
-	@echo "Prometheus: http://localhost:9090"
-	@echo "Jaeger: http://localhost:16686"
-
-logs:
-	@echo "📋 Tailing application logs..."
-	tail -f logs/app.log
-
-status:
-	@echo "📊 Service status..."
-	python scripts/utils/manage.py status
-
-metrics:
-	@echo "📈 Viewing metrics..."
-	curl -s http://localhost:9090/metrics | head -50
-
-# Production
-prod: test lint
-	@echo "🏭 Building for production..."
-	python scripts/utils/manage.py build all
-	@echo "✅ Production build complete"
-
-deploy:
-	@echo "🚀 Deploying to production..."
-	python scripts/utils/manage.py deploy --environment production
-
-deploy-staging:
-	@echo "🚀 Deploying to staging..."
-	python scripts/utils/manage.py deploy --environment staging --dry-run
-
-# Utilities
+# Clean up
 clean:
-	@echo "🧹 Cleaning generated files..."
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
-	rm -rf tests/coverage_reports/*
-	rm -rf benchmarks/results/*
-	rm -rf dist/ build/ *.egg-info
-	rm -rf .pytest_cache .mypy_cache
-	@echo "✅ Cleaned"
-
-backup:
-	@echo "💾 Backing up database..."
-	@mkdir -p backups
-	docker-compose exec postgres pg_dump -U chatbot_user chatbot_db > backups/backup_$(shell date +%Y%m%d_%H%M%S).sql
-	@echo "✅ Backup complete"
-
-restore:
-	@echo "♻️  Restoring database..."
-	@if [ -z "$(FILE)" ]; then \
-		echo "Usage: make restore FILE=backups/backup_YYYYMMDD_HHMMSS.sql"; \
-		exit 1; \
-	fi
-	docker-compose exec -T postgres psql -U chatbot_user chatbot_db < $(FILE)
-	@echo "✅ Restore complete"
-
-# Quick commands for common workflows
-quick-test: docker-services test
-	@echo "✅ Quick test complete"
-
-quick-benchmark: docker-services benchmark validate
-	@echo "✅ Quick benchmark complete"
-
-full-check: install lint test benchmark validate
-	@echo "✅ Full check complete - ready for deployment"
-
-# Environment setup
-env:
-	@echo "🔧 Setting up environment..."
-	@if [ ! -f .env ]; then \
-		cp config/environments/.env.example .env; \
-		echo "Created .env file - please update with your values"; \
-	else \
-		echo ".env file already exists"; \
-	fi
-
-# Version and info
-version:
-	@echo "AI Chatbot System v1.0.0"
-	@python --version
-	@docker --version
-	@node --version 2>/dev/null || echo "Node.js not installed"
-
-info:
-	@echo "📊 Project Information"
-	@echo "====================="
-	@echo "Lines of Python code:"
-	@find . -name "*.py" -not -path "./venv/*" | xargs wc -l | tail -1
-	@echo ""
-	@echo "Test files:"
-	@find tests -name "test_*.py" | wc -l
-	@echo ""
-	@echo "Benchmark files:"
-	@ls -la benchmarks/load_tests/ | wc -l
-	@echo ""
-	@echo "Docker containers:"
-	@docker ps --format "table {{.Names}}\t{{.Status}}" | grep chatbot || echo "None running"
-
-# CI/CD helpers
-ci-test:
-	@echo "🔄 Running CI tests..."
-	pytest --cov=api --cov-report=xml --cov-report=term
-
-ci-lint:
-	@echo "🔄 Running CI linting..."
-	black --check api/ tests/ benchmarks/
-	isort --check-only api/ tests/ benchmarks/
-	flake8 api/ tests/ benchmarks/
-	mypy api/
-
-ci-benchmark:
-	@echo "🔄 Running CI benchmarks..."
-	python benchmarks/run_benchmarks.py --compare-baseline
-
-# Development shortcuts
-d: dev
-s: serve
-t: test
-b: benchmark
-v: validate
-l: lint
-c: clean
-
-.DEFAULT_GOAL := help
+	rm -rf .pytest_cache
+	rm -rf .coverage
+	rm -rf htmlcov
+	rm -rf .mypy_cache

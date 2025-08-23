@@ -11,7 +11,6 @@ from typing import Dict, List, Optional, Set
 from uuid import UUID, uuid4
 
 from fastapi import WebSocket, WebSocketDisconnect
-from websockets.exceptions import ConnectionClosed
 
 from .events import (
     WebSocketEvent,
@@ -107,7 +106,7 @@ class WebSocketConnection:
             
             logger.debug(f"Sent event {event.type} to connection {self.id}")
             
-        except (WebSocketDisconnect, ConnectionClosed) as e:
+        except WebSocketDisconnect as e:
             logger.warning(f"Failed to send event to connection {self.id}: {e}")
             raise
         except Exception as e:
@@ -134,7 +133,7 @@ class WebSocketConnection:
             logger.debug(f"Received event {event.type} from connection {self.id}")
             return event
             
-        except (WebSocketDisconnect, ConnectionClosed):
+        except WebSocketDisconnect:
             logger.info(f"Connection {self.id} disconnected")
             return None
         except json.JSONDecodeError as e:
@@ -473,7 +472,7 @@ class ConnectionManager:
         
         try:
             yield connection
-        except (WebSocketDisconnect, ConnectionClosed):
+        except WebSocketDisconnect:
             await self.disconnect(connection_id, reason="Connection lost")
         except Exception as e:
             logger.error(f"Error in connection context for {connection_id}: {e}")
