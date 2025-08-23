@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
-from app.services.llm.orchestrator import LLMOrchestrator
-from app.models.chat import Message
+from api.services.llm.orchestrator import LLMOrchestrator
+from api.models.chat import Message
 
 @pytest.mark.asyncio
 async def test_llm_orchestrator_model_selection():
