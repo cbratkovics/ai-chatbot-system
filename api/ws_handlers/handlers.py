@@ -6,14 +6,14 @@ import time
 from typing import Dict, Optional
 from uuid import UUID, uuid4
 
-from ..app.config import settings
-from ..providers import (
+from api.app.config import settings
+from api.providers import (
     ProviderOrchestrator,
     CompletionRequest,
     Message as ProviderMessage,
     ProviderError
 )
-from ..models.chat import Message, MessageRole
+from api.models.chat import Message, MessageRole
 from .events import (
     WebSocketEvent,
     EventType,
