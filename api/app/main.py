@@ -1,4 +1,4 @@
-"""Production-grade FastAPI application for AI Chatbot System."""
+"""Production-grade FastAPI application for Chatbot System."""
 
 import asyncio
 import logging
@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing services...")
     
     # Initialize WebSocket connection manager
-    from ..websockets.manager import connection_manager
+    from ..ws_handlers.manager import connection_manager
     await connection_manager.start_background_tasks()
     logger.info("WebSocket connection manager started")
     
@@ -104,7 +104,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="""
-    Production-grade AI Chatbot System with multi-provider support, semantic caching,
+    Production-grade Chatbot System with multi-provider support, semantic caching,
     and enterprise-ready features including multi-tenancy, real-time WebSocket
     connections, and comprehensive monitoring.
     
@@ -193,7 +193,7 @@ async def health_check():
     uptime = time.time() - app.state.startup_time if hasattr(app.state, 'startup_time') else 0
     
     # Get WebSocket stats
-    from ..websockets.manager import connection_manager
+    from ..ws_handlers.manager import connection_manager
     ws_stats = connection_manager.get_connection_stats()
     
     # Basic health check
