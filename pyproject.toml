@@ -1,13 +1,165 @@
+[tool.poetry]
+name = "ai-chatbot-system"
+version = "1.0.0"
+description = "Enterprise AI Chatbot Platform with Multi-Provider Support"
+authors = ["Christopher Bratkovics <cbratkovics@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/cbratkovics/ai-chatbot-system"
+repository = "https://github.com/cbratkovics/ai-chatbot-system"
+documentation = "https://github.com/cbratkovics/ai-chatbot-system/wiki"
+keywords = ["ai", "chatbot", "fastapi", "openai", "llm", "enterprise"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [
+    { include = "app" },
+    { include = "api" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+# Core Web Framework
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.25.0"}
+pydantic = "^2.5.3"
+pydantic-settings = "^2.1.0"
+python-multipart = "^0.0.6"
+
+# Infrastructure
+redis = {extras = ["hiredis"], version = "^5.0.1"}
+aiohttp = "^3.9.1"
+httpx = "^0.25.2"
+websockets = "^12.0"
+tenacity = "^8.2.3"
+aiofiles = "^23.2.1"
+
+# AI/ML Core (optional for flexibility)
+openai = {version = "^1.6.1", optional = true}
+tiktoken = {version = "^0.5.2", optional = true}
+langchain = {version = "^0.1.0", optional = true}
+langchain-openai = {version = "^0.0.5", optional = true}
+langchain-community = {version = "^0.0.10", optional = true}
+
+# Data Processing
+numpy = "^1.26.2"
+pandas = {version = "^2.1.4", optional = true}
+scipy = {version = "^1.11.4", optional = true}
+
+# Monitoring & Observability
+prometheus-client = "^0.19.0"
+opentelemetry-api = {version = "^1.21.0", optional = true}
+opentelemetry-sdk = {version = "^1.21.0", optional = true}
+opentelemetry-instrumentation-fastapi = {version = "^0.43b0", optional = true}
+sentry-sdk = {extras = ["fastapi"], version = "^1.39.1", optional = true}
+
+# Utilities
+python-dotenv = "^1.0.0"
+beautifulsoup4 = "^4.12.2"
+pillow = "^10.1.0"
+orjson = {version = "^3.9.10", optional = true}
+ujson = {version = "^5.9.0", optional = true}
+
+[tool.poetry.group.ml-gpu]
+optional = true
+
+[tool.poetry.group.ml-gpu.dependencies]
+torch = {version = ">=2.1.0,<2.3.0", source = "pytorch-gpu"}
+transformers = "^4.36.0"
+accelerate = "^0.25.0"
+sentence-transformers = "^2.2.2"
+bitsandbytes = "^0.41.3"
+
+[tool.poetry.group.ml-cpu]
+optional = true
+
+[tool.poetry.group.ml-cpu.dependencies]
+torch = {version = ">=2.1.0,<2.3.0", source = "pytorch-cpu", markers = "sys_platform == 'linux' or sys_platform == 'darwin'"}
+onnxruntime = "^1.16.3"
+sentence-transformers = "^2.2.2"
+
+[tool.poetry.group.dev.dependencies]
+# Testing
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.12.0"
+pytest-timeout = "^2.2.0"
+pytest-xdist = "^3.5.0"
+faker = "^20.1.0"
+coverage = {extras = ["toml"], version = "^7.3.2"}
+
+# Code Quality
+black = "^23.11.0"
+ruff = "^0.1.6"
+mypy = "^1.7.1"
+isort = "^5.12.0"
+bandit = "^1.7.5"
+pre-commit = "^3.6.0"
+
+# Development Tools
+ipython = "^8.18.1"
+ipdb = "^0.13.13"
+rich = "^13.7.0"
+pdbpp = "^0.10.3"
+
+# Load Testing
+locust = "^2.17.0"
+
+# Documentation
+mkdocs = {version = "^1.5.3", optional = true}
+mkdocs-material = {version = "^9.5.2", optional = true}
+mkdocstrings = {extras = ["python"], version = "^0.24.0", optional = true}
+
+[tool.poetry.group.prod.dependencies]
+gunicorn = "^21.2.0"
+
+[tool.poetry.extras]
+# Feature groups for optional installations
+all = ["openai", "tiktoken", "langchain", "langchain-openai", "langchain-community", 
+       "pandas", "scipy", "opentelemetry-api", "opentelemetry-sdk", 
+       "opentelemetry-instrumentation-fastapi", "sentry-sdk", "orjson", "ujson"]
+providers = ["openai", "tiktoken"]
+langchain = ["langchain", "langchain-openai", "langchain-community", "tiktoken"]
+monitoring = ["opentelemetry-api", "opentelemetry-sdk", "opentelemetry-instrumentation-fastapi", "sentry-sdk"]
+performance = ["orjson", "ujson"]
+data = ["pandas", "scipy"]
+docs = ["mkdocs", "mkdocs-material", "mkdocstrings"]
+
+[[tool.poetry.source]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"  
+url = "https://download.pytorch.org/whl/cpu"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[build-system]
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Tool Configurations
+
 [tool.black]
 line-length = 120
-target-version = ['py311']
+target-version = ['py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
-  # Directories
   \.eggs
   | \.git
-  | \.hg
   | \.mypy_cache
   | \.tox
   | \.venv
@@ -22,8 +174,11 @@ extend-exclude = '''
 [tool.isort]
 profile = "black"
 line_length = 120
-skip_gitignore = true
-skip = ["migrations", ".venv", "venv"]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
 
 [tool.mypy]
 python_version = "3.11"
@@ -42,6 +197,25 @@ exclude = [
     ".venv/",
 ]
 
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
@@ -52,19 +226,23 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--cov=app",
+    "--cov=api",
     "--cov-branch",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html",
     "--cov-report=xml",
+    "-n=auto",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "gpu: marks tests requiring GPU",
+    "requires_api_key: marks tests requiring API keys",
 ]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "api"]
 omit = [
     "*/tests/*",
     "*/migrations/*",
