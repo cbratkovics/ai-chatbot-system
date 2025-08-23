@@ -1,7 +1,7 @@
-# Benchmarking Framework
+# Performance Benchmarks
 
 ## Overview
-This directory contains comprehensive performance benchmarking tools for the AI Chatbot System. These benchmarks validate all performance claims and provide reproducible metrics.
+This directory contains comprehensive performance benchmarking tools for the Chatbot System. These benchmarks validate all performance claims and provide reproducible metrics.
 
 ## Directory Structure
 ```
