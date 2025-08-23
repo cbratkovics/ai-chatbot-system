@@ -14,6 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import settings
+from ..routes import websocket_router, health_router
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +75,11 @@ async def lifespan(app: FastAPI):
     # Initialize services (would connect to DB, Redis, etc.)
     logger.info("Initializing services...")
     
+    # Initialize WebSocket connection manager
+    from ..websockets.manager import connection_manager
+    await connection_manager.start_background_tasks()
+    logger.info("WebSocket connection manager started")
+    
     # Health check initialization
     app.state.startup_time = time.time()
     app.state.request_count = 0
@@ -85,6 +91,10 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down application...")
+    
+    # Cleanup WebSocket connections
+    await connection_manager.shutdown()
+    logger.info("WebSocket connection manager shutdown")
     
     # Cleanup resources
     logger.info("Application shutdown complete")
@@ -149,6 +159,10 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(PerformanceMiddleware)
 
+# Include routers
+app.include_router(websocket_router, prefix=settings.api_prefix, tags=["websockets"])
+app.include_router(health_router, prefix=settings.api_prefix, tags=["health"])
+
 
 @app.get("/")
 async def root():
@@ -160,6 +174,7 @@ async def root():
         "documentation": f"{settings.api_prefix}/docs",
         "health_check": f"{settings.api_prefix}/health",
         "websocket": f"ws://localhost:{settings.port}{settings.api_prefix}/ws",
+        "websocket_test": f"http://localhost:{settings.port}{settings.api_prefix}/ws/test",
         "features": [
             "Multi-provider AI support",
             "Real-time WebSocket chat", 
@@ -177,6 +192,10 @@ async def health_check():
     """Comprehensive health check endpoint."""
     uptime = time.time() - app.state.startup_time if hasattr(app.state, 'startup_time') else 0
     
+    # Get WebSocket stats
+    from ..websockets.manager import connection_manager
+    ws_stats = connection_manager.get_connection_stats()
+    
     # Basic health check
     health_status = {
         "status": "healthy",
@@ -187,6 +206,11 @@ async def health_check():
             "api": {"status": "healthy", "response_time_ms": 1.2},
             "database": {"status": "healthy", "connection_pool": "available"}, 
             "redis": {"status": "healthy", "latency_ms": 0.8},
+            "websockets": {
+                "status": "healthy", 
+                "active_connections": ws_stats["active_connections"],
+                "total_connections": ws_stats["total_connections"]
+            },
             "providers": {
                 "provider_a": {"status": "healthy", "latency_ms": 245},
                 "provider_b": {"status": "healthy", "latency_ms": 312}
@@ -196,7 +220,8 @@ async def health_check():
             "total_requests": getattr(app.state, 'request_count', 0),
             "avg_response_time_ms": 156.7,
             "cache_hit_rate": 0.42,
-            "active_connections": 47
+            "active_websocket_connections": ws_stats["active_connections"],
+            "total_websocket_messages": ws_stats["total_messages_sent"]
         }
     }
     
