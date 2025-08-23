@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# Pre-commit hook to check for AI/Claude references
+# This ensures the codebase maintains generic provider naming
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+# Check for prohibited terms in staged files
+check_prohibited_terms() {
+    local file=$1
+    local found=false
+    
+    # List of prohibited terms (case insensitive)
+    prohibited_terms=(
+        "openai"
+        "anthropic"
+        "claude"
+        "gpt-3"
+        "gpt-4"
+        "chatgpt"
+        "dall-e"
+        "whisper"
+        "AI Chatbot"
+        "🤖 Generated with Claude"
+    )
+    
+    for term in "${prohibited_terms[@]}"; do
+        if grep -i "$term" "$file" > /dev/null 2>&1; then
+            echo -e "${RED}❌ Found prohibited term '$term' in $file${NC}"
+            found=true
+        fi
+    done
+    
+    if [ "$found" = true ]; then
+        return 1
+    fi
+    return 0
+}
+
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|js|ts|jsx|tsx|md|yml|yaml|json)$' || true)
+
+if [ -z "$staged_files" ]; then
+    exit 0
+fi
+
+echo "Checking for prohibited AI/Claude references..."
+
+failed=false
+while IFS= read -r file; do
+    if [ -f "$file" ]; then
+        if ! check_prohibited_terms "$file"; then
+            failed=true
+        fi
+    fi
+done <<< "$staged_files"
+
+if [ "$failed" = true ]; then
+    echo -e "${RED}❌ Commit rejected: Remove AI/Claude references from staged files${NC}"
+    echo "Use generic terms like:"
+    echo "  - 'provider_a' instead of 'openai'"
+    echo "  - 'provider_b' instead of 'anthropic'"
+    echo "  - 'model-3.5-turbo' instead of 'gpt-3.5-turbo'"
+    echo "  - 'Chatbot System' instead of 'AI Chatbot System'"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ No prohibited references found${NC}"
+exit 0

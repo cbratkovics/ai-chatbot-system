@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Commit message hook to check for AI/Claude references
+# Ensures commit messages don't contain AI-related terms
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+commit_regex='^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,100}'
+commit_file=$1
+commit_message=$(cat "$commit_file")
+
+# Check commit message format
+if ! echo "$commit_message" | grep -qE "$commit_regex"; then
+    echo -e "${RED}❌ Invalid commit message format${NC}"
+    echo "Format: <type>(<scope>): <subject>"
+    echo "Example: feat: add provider orchestration system"
+    exit 1
+fi
+
+# Check for prohibited terms in commit message
+prohibited_terms=(
+    "claude"
+    "Claude"
+    "openai"
+    "OpenAI"
+    "anthropic"
+    "Anthropic"
+    "chatgpt"
+    "ChatGPT"
+    "gpt-"
+    "GPT-"
+    "AI Chatbot"
+    "🤖 Generated with Claude"
+    "intelligent"
+    "AI-"
+)
+
+for term in "${prohibited_terms[@]}"; do
+    if echo "$commit_message" | grep -F "$term" > /dev/null 2>&1; then
+        echo -e "${RED}❌ Commit rejected: Remove AI-related references from commit message${NC}"
+        echo -e "${RED}Found problematic term in: $commit_message${NC}"
+        echo ""
+        echo "Use generic terms in commit messages:"
+        echo "  - 'provider' instead of 'OpenAI/Anthropic'"
+        echo "  - 'model' instead of 'GPT/Claude'"
+        echo "  - 'chatbot system' instead of 'AI chatbot system'"
+        echo "  - 'routing' instead of 'intelligent routing'"
+        exit 1
+    fi
+done
+
+# Check for Co-Authored-By line
+if echo "$commit_message" | grep -q "Co-Authored-By:"; then
+    # Ensure it's the repository owner
+    if ! echo "$commit_message" | grep -q "Co-Authored-By: Christopher Bratkovics"; then
+        echo -e "${RED}❌ Invalid Co-Authored-By line${NC}"
+        echo "Only Christopher Bratkovics should be listed as author/contributor"
+        exit 1
+    fi
+fi
+
+echo -e "${GREEN}✅ Commit message validated${NC}"
+exit 0
