@@ -117,7 +117,11 @@ class TestAuthService:
 
         service = AuthService(secret_key="test-secret")
 
-        user_context = {"user_id": "user123", "roles": ["admin", "user"], "permissions": ["read", "write", "delete"]}
+        user_context = {
+            "user_id": "user123",
+            "roles": ["admin", "user"],
+            "permissions": ["read", "write", "delete"],
+        }
 
         assert service.has_permission(user_context, "read") is True
         assert service.has_permission(user_context, "execute") is False

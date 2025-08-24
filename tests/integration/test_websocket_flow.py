@@ -46,7 +46,9 @@ class TestWebSocketFlow:
         uri = "ws://localhost:8000/ws/chat"
 
         async with connect(uri) as websocket:
-            await websocket.send(json.dumps({"type": "chat", "data": {"message": "Tell me a story", "stream": True}}))
+            await websocket.send(
+                json.dumps({"type": "chat", "data": {"message": "Tell me a story", "stream": True}})
+            )
 
             chunks = []
             while True:
@@ -132,7 +134,9 @@ class TestWebSocketFlow:
 
         async with connect(uri) as websocket:
             for i in range(150):
-                await websocket.send(json.dumps({"type": "chat", "data": {"message": f"Message {i}"}}))
+                await websocket.send(
+                    json.dumps({"type": "chat", "data": {"message": f"Message {i}"}})
+                )
 
             response = await websocket.recv()
             data = json.loads(response)
@@ -188,7 +192,9 @@ class TestWebSocketFlow:
             await ws.send(json.dumps({"type": "join_room", "room": "test_room"}))
             connections.append(ws)
 
-        await connections[0].send(json.dumps({"type": "broadcast", "room": "test_room", "message": "Hello everyone"}))
+        await connections[0].send(
+            json.dumps({"type": "broadcast", "room": "test_room", "message": "Hello everyone"})
+        )
 
         for ws in connections[1:]:
             response = await ws.recv()

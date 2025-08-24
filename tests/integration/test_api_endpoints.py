@@ -12,7 +12,9 @@ class TestChatEndpoints:
     """Test suite for chat API endpoints."""
 
     @pytest.mark.asyncio
-    async def test_chat_completion_endpoint(self, async_http_client, sample_chat_request, auth_headers):
+    async def test_chat_completion_endpoint(
+        self, async_http_client, sample_chat_request, auth_headers
+    ):
         """Test POST /api/v1/chat/completions endpoint."""
         with patch("api.main.app") as mock_app:
             response = await async_http_client.post(
@@ -26,7 +28,9 @@ class TestChatEndpoints:
             assert data["object"] == "chat.completion"
 
     @pytest.mark.asyncio
-    async def test_streaming_chat_endpoint(self, async_http_client, sample_chat_request, auth_headers):
+    async def test_streaming_chat_endpoint(
+        self, async_http_client, sample_chat_request, auth_headers
+    ):
         """Test streaming chat completion endpoint."""
         sample_chat_request["stream"] = True
 
@@ -57,7 +61,9 @@ class TestChatEndpoints:
         chat_id = "chat123"
 
         with patch("api.main.app") as mock_app:
-            response = await async_http_client.delete(f"/api/v1/chat/{chat_id}", headers=auth_headers)
+            response = await async_http_client.delete(
+                f"/api/v1/chat/{chat_id}", headers=auth_headers
+            )
 
             assert response.status_code == 204
 
@@ -85,8 +91,9 @@ class TestWebSocketEndpoints:
     @pytest.mark.asyncio
     async def test_websocket_connection(self, mock_websocket, auth_headers):
         """Test WebSocket connection establishment."""
-        from api.main import app
         from fastapi.testclient import TestClient
+
+        from api.main import app
 
         with TestClient(app) as client:
             with client.websocket_connect("/ws/chat", headers=auth_headers) as websocket:
@@ -97,8 +104,9 @@ class TestWebSocketEndpoints:
     @pytest.mark.asyncio
     async def test_websocket_streaming(self, mock_websocket, sample_chat_request):
         """Test WebSocket message streaming."""
-        from api.main import app
         from fastapi.testclient import TestClient
+
+        from api.main import app
 
         with TestClient(app) as client:
             with client.websocket_connect("/ws/chat") as websocket:
@@ -116,8 +124,9 @@ class TestWebSocketEndpoints:
     @pytest.mark.asyncio
     async def test_websocket_error_handling(self, mock_websocket):
         """Test WebSocket error handling."""
-        from api.main import app
         from fastapi.testclient import TestClient
+
+        from api.main import app
 
         with TestClient(app) as client:
             with client.websocket_connect("/ws/chat") as websocket:
@@ -185,7 +194,9 @@ class TestTenantEndpoints:
     async def test_create_tenant(self, async_http_client, tenant_config, auth_headers):
         """Test POST /api/v1/tenants endpoint."""
         with patch("api.main.app") as mock_app:
-            response = await async_http_client.post("/api/v1/tenants", json=tenant_config, headers=auth_headers)
+            response = await async_http_client.post(
+                "/api/v1/tenants", json=tenant_config, headers=auth_headers
+            )
 
             assert response.status_code == 201
             data = response.json()
@@ -197,7 +208,9 @@ class TestTenantEndpoints:
         tenant_id = "tenant123"
 
         with patch("api.main.app") as mock_app:
-            response = await async_http_client.get(f"/api/v1/tenants/{tenant_id}", headers=auth_headers)
+            response = await async_http_client.get(
+                f"/api/v1/tenants/{tenant_id}", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -210,7 +223,9 @@ class TestTenantEndpoints:
         updates = {"tier": "enterprise", "status": "active"}
 
         with patch("api.main.app") as mock_app:
-            response = await async_http_client.put(f"/api/v1/tenants/{tenant_id}", json=updates, headers=auth_headers)
+            response = await async_http_client.put(
+                f"/api/v1/tenants/{tenant_id}", json=updates, headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -300,7 +315,9 @@ class TestCacheEndpoints:
         ]
 
         with patch("api.main.app") as mock_app:
-            response = await async_http_client.post("/api/v1/cache/warmup", json=warmup_data, headers=auth_headers)
+            response = await async_http_client.post(
+                "/api/v1/cache/warmup", json=warmup_data, headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()

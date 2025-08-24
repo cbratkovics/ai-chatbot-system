@@ -21,7 +21,11 @@ class TestCacheIntegration:
 
         await cache.set("What's the weather today?", sample_chat_response)
 
-        similar_queries = ["What is the weather today?", "How's the weather today?", "Tell me about today's weather"]
+        similar_queries = [
+            "What is the weather today?",
+            "How's the weather today?",
+            "Tell me about today's weather",
+        ]
 
         for query in similar_queries:
             result = await cache.get(query)
@@ -82,8 +86,9 @@ class TestCacheIntegration:
     @pytest.mark.asyncio
     async def test_distributed_cache_consistency(self):
         """Test distributed cache consistency across instances."""
-        from api.core.cache.cache_manager import CacheManager
         import redis.asyncio as aioredis
+
+        from api.core.cache.cache_manager import CacheManager
 
         redis1 = await aioredis.create_redis_pool("redis://localhost:6379/0")
         redis2 = await aioredis.create_redis_pool("redis://localhost:6379/0")

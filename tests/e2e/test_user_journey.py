@@ -28,7 +28,10 @@ class TestUserJourney:
             assert response.status_code == 201
             user_data = response.json()
 
-            login_data = {"username": registration_data["email"], "password": registration_data["password"]}
+            login_data = {
+                "username": registration_data["email"],
+                "password": registration_data["password"],
+            }
             response = await client.post("/api/v1/auth/login", json=login_data)
             assert response.status_code == 200
             tokens = response.json()
@@ -41,7 +44,9 @@ class TestUserJourney:
             assert profile["email"] == registration_data["email"]
 
             api_key_data = {"name": "Production API Key"}
-            response = await client.post("/api/v1/auth/api-keys", json=api_key_data, headers=headers)
+            response = await client.post(
+                "/api/v1/auth/api-keys", json=api_key_data, headers=headers
+            )
             assert response.status_code == 201
             api_key = response.json()
 
@@ -74,18 +79,25 @@ class TestUserJourney:
             for message in messages:
                 request_data = {"message": message, "session_id": session_id, "model": "gpt-4"}
 
-                response = await client.post("/api/v1/chat/completions", json=request_data, headers=headers)
+                response = await client.post(
+                    "/api/v1/chat/completions", json=request_data, headers=headers
+                )
 
                 assert response.status_code == 200
                 chat_response = response.json()
 
                 conversation_history.append(
-                    {"user": message, "assistant": chat_response["choices"][0]["message"]["content"]}
+                    {
+                        "user": message,
+                        "assistant": chat_response["choices"][0]["message"]["content"],
+                    }
                 )
 
                 await asyncio.sleep(0.5)
 
-            history_response = await client.get(f"/api/v1/chat/sessions/{session_id}/history", headers=headers)
+            history_response = await client.get(
+                f"/api/v1/chat/sessions/{session_id}/history", headers=headers
+            )
             assert history_response.status_code == 200
             history = history_response.json()
             assert len(history["messages"]) == len(messages) * 2
@@ -101,11 +113,20 @@ class TestUserJourney:
             auth_response = await websocket.recv()
             assert json.loads(auth_response)["type"] == "auth_success"
 
-            questions = ["Write a short story about a robot", "Continue the story", "How does it end?"]
+            questions = [
+                "Write a short story about a robot",
+                "Continue the story",
+                "How does it end?",
+            ]
 
             for question in questions:
                 await websocket.send(
-                    json.dumps({"type": "chat", "data": {"message": question, "stream": True, "model": "gpt-4"}})
+                    json.dumps(
+                        {
+                            "type": "chat",
+                            "data": {"message": question, "stream": True, "model": "gpt-4"},
+                        }
+                    )
                 )
 
                 full_response = []
@@ -137,7 +158,9 @@ class TestUserJourney:
                 start_time = time.time()
 
                 response = await client.post(
-                    "/api/v1/chat/completions", json={"message": prompt, "model": model}, headers=headers
+                    "/api/v1/chat/completions",
+                    json={"message": prompt, "model": model},
+                    headers=headers,
                 )
 
                 latencies[model] = (time.time() - start_time) * 1000
@@ -145,9 +168,14 @@ class TestUserJourney:
                 assert response.status_code == 200
                 responses[model] = response.json()
 
-            comparison_request = {"responses": responses, "criteria": ["accuracy", "clarity", "completeness"]}
+            comparison_request = {
+                "responses": responses,
+                "criteria": ["accuracy", "clarity", "completeness"],
+            }
 
-            comparison = await client.post("/api/v1/analysis/compare", json=comparison_request, headers=headers)
+            comparison = await client.post(
+                "/api/v1/analysis/compare", json=comparison_request, headers=headers
+            )
 
             assert comparison.status_code == 200
             results = comparison.json()
@@ -175,7 +203,9 @@ class TestUserJourney:
                 start_time = time.time()
 
                 response = await client.post(
-                    "/api/v1/chat/completions", json={"message": question, "model": "gpt-4"}, headers=headers
+                    "/api/v1/chat/completions",
+                    json={"message": question, "model": "gpt-4"},
+                    headers=headers,
                 )
 
                 latency = (time.time() - start_time) * 1000
@@ -209,7 +239,9 @@ class TestUserJourney:
 
             for i in range(150):
                 response = await client.post(
-                    "/api/v1/chat/completions", json={"message": f"Request {i}", "model": "gpt-4"}, headers=headers
+                    "/api/v1/chat/completions",
+                    json={"message": f"Request {i}", "model": "gpt-4"},
+                    headers=headers,
                 )
 
                 requests_made += 1
@@ -241,25 +273,35 @@ class TestUserJourney:
             headers = {"Authorization": "Bearer test-token"}
 
             invalid_request = {"invalid_field": "test"}
-            response = await client.post("/api/v1/chat/completions", json=invalid_request, headers=headers)
+            response = await client.post(
+                "/api/v1/chat/completions", json=invalid_request, headers=headers
+            )
             assert response.status_code == 422
             error = response.json()
             assert "detail" in error
 
             valid_request = {"message": "Valid request", "model": "gpt-4"}
-            response = await client.post("/api/v1/chat/completions", json=valid_request, headers=headers)
+            response = await client.post(
+                "/api/v1/chat/completions", json=valid_request, headers=headers
+            )
             assert response.status_code == 200
 
             expired_token_headers = {"Authorization": "Bearer expired-token"}
-            response = await client.post("/api/v1/chat/completions", json=valid_request, headers=expired_token_headers)
+            response = await client.post(
+                "/api/v1/chat/completions", json=valid_request, headers=expired_token_headers
+            )
             assert response.status_code == 401
 
-            refresh_response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "valid-refresh-token"})
+            refresh_response = await client.post(
+                "/api/v1/auth/refresh", json={"refresh_token": "valid-refresh-token"}
+            )
             assert refresh_response.status_code == 200
             new_tokens = refresh_response.json()
 
             new_headers = {"Authorization": f"Bearer {new_tokens['access_token']}"}
-            response = await client.post("/api/v1/chat/completions", json=valid_request, headers=new_headers)
+            response = await client.post(
+                "/api/v1/chat/completions", json=valid_request, headers=new_headers
+            )
             assert response.status_code == 200
 
     @pytest.mark.asyncio
@@ -276,7 +318,11 @@ class TestUserJourney:
                     headers=headers,
                 )
                 latency = (time.time() - start_time) * 1000
-                return {"request_id": request_id, "status": response.status_code, "latency_ms": latency}
+                return {
+                    "request_id": request_id,
+                    "status": response.status_code,
+                    "latency_ms": latency,
+                }
 
             concurrent_users = 100
             tasks = [make_request(i) for i in range(concurrent_users)]

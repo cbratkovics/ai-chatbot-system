@@ -1,103 +1,229 @@
 [tool.poetry]
-name = "ai-chatbot-system"
+name = "enterprise-chatbot-platform"
 version = "1.0.0"
-description = "Intelligent chatbot system"
-authors = ["Developer <dev@example.com>"]
+description = "Production-grade multi-provider chatbot platform with enterprise features"
+authors = ["Christopher Bratkovics <your-email@example.com>"]
+license = "MIT"
 readme = "README.md"
-packages = [{include = "app"}, {include = "api"}]
+homepage = "https://github.com/cbratkovics/ai-chatbot-system"
+repository = "https://github.com/cbratkovics/ai-chatbot-system"
+documentation = "https://github.com/cbratkovics/ai-chatbot-system/docs"
+keywords = ["chatbot", "fastapi", "websocket", "enterprise", "multi-tenant"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+# Core Web Framework
 fastapi = "^0.109.0"
-uvicorn = {extras = ["standard"], version = "^0.25.0"}
-pydantic = "^2.5.3"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
-httpx = "^0.26.0"
-aiohttp = "^3.9.1"
+
+# Database & Caching
+sqlalchemy = "^2.0.23"
+asyncpg = "^0.29.0"
 redis = "^5.0.1"
-sqlalchemy = "^2.0.25"
-alembic = "^1.13.1"
-psycopg2-binary = "^2.9.9"
-python-multipart = "^0.0.6"
+alembic = "^1.13.0"
+
+# API & Networking
+httpx = "^0.25.2"
+websockets = "^12.0"
+aiohttp = "^3.9.1"
+
+# Authentication & Security
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-python-dotenv = "^1.0.0"
-aioredis = "^2.0.1"
-celery = "^5.3.4"
-websockets = "^12.0"
-tenacity = "^8.2.3"
-aiofiles = "^23.2.1"
-numpy = "^1.26.2"
-scikit-learn = "^1.3.2"
-prometheus-client = "^0.19.0"
-beautifulsoup4 = "^4.12.2"
-pillow = "^10.1.0"
+python-multipart = "^0.0.6"
 
-# Monitoring and Observability
+# Monitoring & Observability
+prometheus-client = "^0.19.0"
 opentelemetry-api = "^1.21.0"
 opentelemetry-sdk = "^1.21.0"
-opentelemetry-instrumentation-fastapi = "^0.42b0"
+opentelemetry-instrumentation-fastapi = "^0.43b0"
 opentelemetry-exporter-jaeger = "^1.21.0"
-structlog = "^23.2.0"
 
-# Additional Production Dependencies
-gunicorn = "^21.2.0"
+# Utilities
+python-dotenv = "^1.0.0"
+tenacity = "^8.2.3"
+structlog = "^24.1.0"
 python-json-logger = "^2.0.7"
 
+# Async & Concurrency
+aiocache = "^0.12.2"
+aiofiles = "^23.2.1"
+
 [tool.poetry.group.dev.dependencies]
+# Testing
 pytest = "^7.4.3"
 pytest-asyncio = "^0.21.1"
 pytest-cov = "^4.1.0"
 pytest-mock = "^3.12.0"
 pytest-timeout = "^2.2.0"
-black = "^23.11.0"
+pytest-xdist = "^3.5.0"
+faker = "^21.0.0"
+factory-boy = "^3.3.0"
+httpx = "^0.25.2"
+
+# Code Quality
+black = "^23.12.0"
+isort = "^5.13.0"
 flake8 = "^6.1.0"
 mypy = "^1.7.0"
-isort = "^5.12.0"
+pylint = "^3.0.3"
+bandit = "^1.7.5"
+safety = "^3.0.1"
+
+# Development Tools
+ipython = "^8.18.0"
+ipdb = "^0.13.13"
+rich = "^13.7.0"
+pre-commit = "^3.6.0"
+
+[tool.poetry.group.ml]
+optional = true
+
+[tool.poetry.group.ml.dependencies]
+# ML/AI Core
+numpy = "^1.26.0"
+pandas = "^2.1.4"
+scikit-learn = "^1.3.2"
+transformers = "^4.36.0"
+tokenizers = "^0.15.0"
+
+# Embeddings & Vector DB
+sentence-transformers = "^2.2.2"
+faiss-cpu = "^1.7.4"
+chromadb = "^0.4.20"
+qdrant-client = "^1.7.0"
+
+[tool.poetry.group.ml-gpu]
+optional = true
+
+[tool.poetry.group.ml-gpu.dependencies]
+torch = {version = "^2.1.0", source = "pytorch-gpu"}
+torchvision = {version = "^0.16.0", source = "pytorch-gpu"}
+tensorflow = "^2.15.0"
+accelerate = "^0.25.0"
+bitsandbytes = "^0.41.3"
+
+[tool.poetry.group.ml-cpu]
+optional = true
+
+[tool.poetry.group.ml-cpu.dependencies]
+torch = {version = "^2.1.0+cpu", source = "pytorch-cpu"}
+onnxruntime = "^1.16.3"
+tensorflow-cpu = "^2.15.0"
+
+[tool.poetry.group.prod]
+optional = true
+
+[tool.poetry.group.prod.dependencies]
+gunicorn = "^21.2.0"
+uvloop = "^0.19.0"
+httptools = "^0.6.1"
+supervisor = "^4.2.5"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.5.3"
+mkdocs-material = "^9.5.0"
+mkdocstrings = {extras = ["python"], version = "^0.24.0"}
+mkdocs-mermaid2-plugin = "^1.1.1"
+
+[[tool.poetry.source]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "supplemental"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.scripts]
+start = "api.main:start_server"
+migrate = "scripts.utils.manage:migrate"
+test = "pytest:main"
+
+# Tool Configurations
+
 [tool.black]
-line-length = 88
+line-length = 100
 target-version = ['py311']
-include = '\\.pyi?$'
+include = '\.pyi?$'
 extend-exclude = '''
 /(
-  | dist
-  | .eggs
-  | .git
-  | .hg
-  | .mypy_cache
-  | .tox
+  | migrations
   | .venv
-  | _build
-  | buck-out
   | build
+  | dist
 )/
 '''
 
 [tool.isort]
 profile = "black"
+line_length = 100
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-line_length = 88
 
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-ignore_missing_imports = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --tb=short"
+addopts = "-ra -q --strict-markers --cov=api --cov-report=term-missing"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["api"]
+omit = ["*/tests/*", "*/migrations/*", "*/__init__.py"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0903",  # too-few-public-methods
+    "R0801",  # duplicate-code
+    "W0212",  # protected-access
+]

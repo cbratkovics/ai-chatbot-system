@@ -6,7 +6,7 @@ from .rate_limiter import (
     RateLimiter,
     SlidingWindowRateLimiter,
     TenantRateLimiter,
-    TokenBucketRateLimiter
+    TokenBucketRateLimiter,
 )
 from .tenant_manager import TenantManager
 
@@ -17,5 +17,5 @@ __all__ = [
     "SlidingWindowRateLimiter",
     "DistributedRateLimiter",
     "TenantRateLimiter",
-    "AdaptiveRateLimiter"
+    "AdaptiveRateLimiter",
 ]

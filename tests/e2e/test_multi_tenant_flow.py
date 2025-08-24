@@ -98,7 +98,10 @@ class TestMultiTenantFlow:
             response = await client.post("/api/v1/tenants/register", json=enterprise_tenant)
             enterprise = response.json()
 
-            basic_headers = {"Authorization": f"Bearer {basic['access_token']}", "X-Tenant-ID": basic["tenant_id"]}
+            basic_headers = {
+                "Authorization": f"Bearer {basic['access_token']}",
+                "X-Tenant-ID": basic["tenant_id"],
+            }
 
             enterprise_headers = {
                 "Authorization": f"Bearer {enterprise['access_token']}",
@@ -158,12 +161,16 @@ class TestMultiTenantFlow:
                 "X-Tenant-ID": tenants["basic"]["tenant_id"],
             }
             response = await client.post(
-                "/api/v1/chat/completions", json={"message": "Test", "model": "gpt-4"}, headers=basic_headers
+                "/api/v1/chat/completions",
+                json={"message": "Test", "model": "gpt-4"},
+                headers=basic_headers,
             )
             assert response.status_code == 403
 
             response = await client.post(
-                "/api/v1/chat/completions", json={"message": "Test", "model": "gpt-3.5-turbo"}, headers=basic_headers
+                "/api/v1/chat/completions",
+                json={"message": "Test", "model": "gpt-3.5-turbo"},
+                headers=basic_headers,
             )
             assert response.status_code == 200
 
@@ -173,7 +180,9 @@ class TestMultiTenantFlow:
             }
 
             response = await client.post(
-                "/api/v1/chat/completions", json={"message": "Test", "model": "gpt-4"}, headers=enterprise_headers
+                "/api/v1/chat/completions",
+                json={"message": "Test", "model": "gpt-4"},
+                headers=enterprise_headers,
             )
             assert response.status_code == 200
 
@@ -200,7 +209,10 @@ class TestMultiTenantFlow:
             response = await client.post("/api/v1/tenants/register", json=tenant_data)
             tenant = response.json()
 
-            headers = {"Authorization": f"Bearer {tenant['access_token']}", "X-Tenant-ID": tenant["tenant_id"]}
+            headers = {
+                "Authorization": f"Bearer {tenant['access_token']}",
+                "X-Tenant-ID": tenant["tenant_id"],
+            }
 
             start_date = datetime.utcnow()
 
@@ -226,7 +238,9 @@ class TestMultiTenantFlow:
             assert usage["total_tokens"] > 0
             assert "cost_breakdown" in usage
 
-            billing_response = await client.get(f"/api/v1/tenants/{tenant['tenant_id']}/billing", headers=headers)
+            billing_response = await client.get(
+                f"/api/v1/tenants/{tenant['tenant_id']}/billing", headers=headers
+            )
             assert billing_response.status_code == 200
             billing = billing_response.json()
 
@@ -247,7 +261,10 @@ class TestMultiTenantFlow:
             response = await client.post("/api/v1/tenants/register", json=tenant_data)
             tenant = response.json()
 
-            admin_headers = {"Authorization": f"Bearer {tenant['access_token']}", "X-Tenant-ID": tenant["tenant_id"]}
+            admin_headers = {
+                "Authorization": f"Bearer {tenant['access_token']}",
+                "X-Tenant-ID": tenant["tenant_id"],
+            }
 
             users = []
             for i in range(5):
@@ -257,12 +274,16 @@ class TestMultiTenantFlow:
                     "role": "user" if i < 3 else "manager",
                 }
                 response = await client.post(
-                    f"/api/v1/tenants/{tenant['tenant_id']}/users", json=user_data, headers=admin_headers
+                    f"/api/v1/tenants/{tenant['tenant_id']}/users",
+                    json=user_data,
+                    headers=admin_headers,
                 )
                 assert response.status_code == 201
                 users.append(response.json())
 
-            response = await client.get(f"/api/v1/tenants/{tenant['tenant_id']}/users", headers=admin_headers)
+            response = await client.get(
+                f"/api/v1/tenants/{tenant['tenant_id']}/users", headers=admin_headers
+            )
             assert response.status_code == 200
             all_users = response.json()
             assert len(all_users["users"]) == 6
@@ -285,12 +306,14 @@ class TestMultiTenantFlow:
             assert response.status_code == 200
 
             response = await client.delete(
-                f"/api/v1/tenants/{tenant['tenant_id']}/users/{users[0]['id']}", headers=user_headers
+                f"/api/v1/tenants/{tenant['tenant_id']}/users/{users[0]['id']}",
+                headers=user_headers,
             )
             assert response.status_code == 403
 
             response = await client.delete(
-                f"/api/v1/tenants/{tenant['tenant_id']}/users/{users[0]['id']}", headers=admin_headers
+                f"/api/v1/tenants/{tenant['tenant_id']}/users/{users[0]['id']}",
+                headers=admin_headers,
             )
             assert response.status_code == 204
 
@@ -307,7 +330,10 @@ class TestMultiTenantFlow:
             response = await client.post("/api/v1/tenants/register", json=tenant_data)
             tenant = response.json()
 
-            headers = {"Authorization": f"Bearer {tenant['access_token']}", "X-Tenant-ID": tenant["tenant_id"]}
+            headers = {
+                "Authorization": f"Bearer {tenant['access_token']}",
+                "X-Tenant-ID": tenant["tenant_id"],
+            }
 
             for i in range(50):
                 await client.post(
@@ -326,7 +352,9 @@ class TestMultiTenantFlow:
             }
 
             response = await client.post(
-                f"/api/v1/tenants/{tenant['tenant_id']}/export", json=export_request, headers=headers
+                f"/api/v1/tenants/{tenant['tenant_id']}/export",
+                json=export_request,
+                headers=headers,
             )
             assert response.status_code == 202
             export_job = response.json()
@@ -334,7 +362,8 @@ class TestMultiTenantFlow:
             await asyncio.sleep(5)
 
             response = await client.get(
-                f"/api/v1/tenants/{tenant['tenant_id']}/exports/{export_job['job_id']}", headers=headers
+                f"/api/v1/tenants/{tenant['tenant_id']}/exports/{export_job['job_id']}",
+                headers=headers,
             )
             assert response.status_code == 200
             export_status = response.json()

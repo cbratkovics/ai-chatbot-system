@@ -29,15 +29,17 @@ class TestModelSwitching:
     @pytest.mark.asyncio
     async def test_automatic_failover(self, sample_chat_request):
         """Test automatic failover when primary model fails."""
+        from api.core.models.anthropic_provider import AnthropicProvider
         from api.core.models.fallback_handler import FallbackHandler
         from api.core.models.openai_provider import OpenAIProvider
-        from api.core.models.anthropic_provider import AnthropicProvider
 
         primary = OpenAIProvider()
         secondary = AnthropicProvider()
 
         with patch.object(primary, "chat_completion", side_effect=Exception("Primary failed")):
-            with patch.object(secondary, "chat_completion", return_value={"response": "from secondary"}):
+            with patch.object(
+                secondary, "chat_completion", return_value={"response": "from secondary"}
+            ):
                 handler = FallbackHandler(primary=primary, secondary=secondary)
                 response = await handler.execute_with_fallback(sample_chat_request)
 
@@ -46,8 +48,9 @@ class TestModelSwitching:
     @pytest.mark.asyncio
     async def test_model_performance_comparison(self, sample_chat_request):
         """Test performance comparison between models."""
-        from api.core.models.model_factory import ModelFactory
         import time
+
+        from api.core.models.model_factory import ModelFactory
 
         factory = ModelFactory()
         models = ["gpt-4", "claude-3-opus", "gpt-3.5-turbo"]
@@ -102,7 +105,12 @@ class TestModelSwitching:
             {"role": "user", "content": "What's my name?"},
         ]
 
-        request_gpt = {**sample_chat_request, "model": "gpt-4", "messages": messages, "session_id": session_id}
+        request_gpt = {
+            **sample_chat_request,
+            "model": "gpt-4",
+            "messages": messages,
+            "session_id": session_id,
+        }
 
         response_gpt = await factory.process_request(request_gpt)
         assert "Alice" in response_gpt["choices"][0]["message"]["content"]

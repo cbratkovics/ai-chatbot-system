@@ -1,40 +1,44 @@
-.PHONY: install test lint format type-check ci-local clean
+.PHONY: help install test lint format clean docker-build docker-up docker-down
 
-# Install all dependencies with Poetry
-install:
+help:  ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+install:  ## Install dependencies with Poetry
 	poetry install --with dev
 
-# Run tests
-test:
-	poetry run pytest tests/ -v
+test:  ## Run tests with coverage
+	poetry run pytest tests/ -v --cov=api --cov-report=term-missing
 
-# Run tests with coverage
-test-cov:
-	poetry run pytest tests/ -v --cov=api --cov=app --cov-report=term-missing --cov-report=html
+lint:  ## Run linting checks
+	poetry run black --check api/ tests/
+	poetry run isort --check-only api/ tests/
+	poetry run flake8 api/ tests/
+	poetry run mypy api/
 
-# Lint code
-lint:
-	poetry run flake8 api/ app/ tests/
-	poetry run black --check api/ app/ tests/
-	poetry run isort --check-only api/ app/ tests/
+format:  ## Format code
+	poetry run black api/ tests/
+	poetry run isort api/ tests/
 
-# Format code
-format:
-	poetry run black api/ app/ tests/
-	poetry run isort api/ app/ tests/
+security:  ## Run security checks
+	poetry run bandit -r api/
+	poetry run safety check
 
-# Type checking
-type-check:
-	poetry run mypy api/ app/ --ignore-missing-imports
-
-# Run all CI checks locally
-ci-local: lint type-check test
-
-# Clean up
-clean:
+clean:  ## Clean up cache and temp files
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
-	rm -rf .pytest_cache
-	rm -rf .coverage
-	rm -rf htmlcov
-	rm -rf .mypy_cache
+	rm -rf .pytest_cache .coverage coverage.xml htmlcov/
+
+docker-build:  ## Build Docker image
+	docker build -t chatbot-platform:latest .
+
+docker-up:  ## Start services with docker-compose
+	docker-compose up -d
+
+docker-down:  ## Stop services
+	docker-compose down
+
+migrate:  ## Run database migrations
+	poetry run alembic upgrade head
+
+serve:  ## Start development server
+	poetry run python -m api.main

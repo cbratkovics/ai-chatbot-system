@@ -89,7 +89,9 @@ class TestTenantManager:
 
         manager = TenantManager(db=mock_database)
 
-        quota_check = await manager.check_quota(tenant_config["tenant_id"], resource="tokens", requested=10000)
+        quota_check = await manager.check_quota(
+            tenant_config["tenant_id"], resource="tokens", requested=10000
+        )
 
         assert quota_check["allowed"] is True
         assert quota_check["remaining"] > 0
@@ -125,7 +127,9 @@ class TestTenantManager:
         manager = TenantManager(db=mock_database)
 
         billing = await manager.calculate_billing(
-            tenant_id="tenant123", start_date=datetime.utcnow() - timedelta(days=30), end_date=datetime.utcnow()
+            tenant_id="tenant123",
+            start_date=datetime.utcnow() - timedelta(days=30),
+            end_date=datetime.utcnow(),
         )
 
         assert "total_cost" in billing
@@ -138,7 +142,9 @@ class TestTenantManager:
 
         manager = TenantManager(db=mock_database)
 
-        result = await manager.migrate_tenant(tenant_id="tenant123", from_tier="basic", to_tier="enterprise")
+        result = await manager.migrate_tenant(
+            tenant_id="tenant123", from_tier="basic", to_tier="enterprise"
+        )
 
         assert result["success"] is True
         mock_database.commit.assert_called()

@@ -1,8 +1,9 @@
 """Load testing configuration for AI Chatbot System"""
 
-from locust import HttpUser, task, between
 import json
 import random
+
+from locust import HttpUser, between, task
 
 
 class ChatbotUser(HttpUser):
@@ -34,12 +35,17 @@ class ChatbotUser(HttpUser):
             "What can you do?",
         ]
 
-        payload = {"message": random.choice(messages), "session_id": f"test-session-{random.randint(1, 1000)}"}
+        payload = {
+            "message": random.choice(messages),
+            "session_id": f"test-session-{random.randint(1, 1000)}",
+        }
 
         headers = {"Content-Type": "application/json"}
 
         # Make a POST request to chat endpoint
-        with self.client.post("/api/chat", json=payload, headers=headers, catch_response=True) as response:
+        with self.client.post(
+            "/api/chat", json=payload, headers=headers, catch_response=True
+        ) as response:
             if response.status_code == 200:
                 response.success()
             else:

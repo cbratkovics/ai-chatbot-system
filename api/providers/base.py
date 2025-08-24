@@ -9,18 +9,14 @@ from enum import Enum
 from typing import Any, AsyncIterator, Dict, List, Optional
 from uuid import UUID
 
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential
-)
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
 
 class ProviderStatus(str, Enum):
     """Provider health status."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -29,13 +25,13 @@ class ProviderStatus(str, Enum):
 
 class ProviderError(Exception):
     """Base exception for provider errors."""
-    
+
     def __init__(
-        self, 
-        message: str, 
+        self,
+        message: str,
         error_code: Optional[str] = None,
         retryable: bool = True,
-        provider_name: Optional[str] = None
+        provider_name: Optional[str] = None,
     ):
         super().__init__(message)
         self.message = message
@@ -46,58 +42,71 @@ class ProviderError(Exception):
 
 class RateLimitError(ProviderError):
     """Rate limit exceeded error."""
-    
-    def __init__(self, message: str, retry_after: Optional[int] = None, provider_name: Optional[str] = None):
-        super().__init__(message, error_code="rate_limit", retryable=True, provider_name=provider_name)
+
+    def __init__(
+        self, message: str, retry_after: Optional[int] = None, provider_name: Optional[str] = None
+    ):
+        super().__init__(
+            message, error_code="rate_limit", retryable=True, provider_name=provider_name
+        )
         self.retry_after = retry_after
 
 
 class QuotaExceededError(ProviderError):
     """Quota exceeded error."""
-    
+
     def __init__(self, message: str, provider_name: Optional[str] = None):
-        super().__init__(message, error_code="quota_exceeded", retryable=False, provider_name=provider_name)
+        super().__init__(
+            message, error_code="quota_exceeded", retryable=False, provider_name=provider_name
+        )
 
 
 class AuthenticationError(ProviderError):
     """Authentication failed error."""
-    
+
     def __init__(self, message: str, provider_name: Optional[str] = None):
-        super().__init__(message, error_code="authentication", retryable=False, provider_name=provider_name)
+        super().__init__(
+            message, error_code="authentication", retryable=False, provider_name=provider_name
+        )
 
 
 class ModelNotFoundError(ProviderError):
     """Model not found error."""
-    
+
     def __init__(self, message: str, model: str, provider_name: Optional[str] = None):
-        super().__init__(message, error_code="model_not_found", retryable=False, provider_name=provider_name)
+        super().__init__(
+            message, error_code="model_not_found", retryable=False, provider_name=provider_name
+        )
         self.model = model
 
 
 class ContentFilterError(ProviderError):
     """Content filter violation error."""
-    
+
     def __init__(self, message: str, provider_name: Optional[str] = None):
-        super().__init__(message, error_code="content_filter", retryable=False, provider_name=provider_name)
+        super().__init__(
+            message, error_code="content_filter", retryable=False, provider_name=provider_name
+        )
 
 
 @dataclass
 class TokenUsage:
     """Token usage information."""
+
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
-    
+
     @property
     def prompt_cost(self) -> float:
         """Calculate prompt cost (override in provider implementations)."""
         return 0.0
-    
-    @property 
+
+    @property
     def completion_cost(self) -> float:
         """Calculate completion cost (override in provider implementations)."""
         return 0.0
-    
+
     @property
     def total_cost(self) -> float:
         """Calculate total cost."""
@@ -107,7 +116,7 @@ class TokenUsage:
 @dataclass
 class CompletionResponse:
     """Response from a completion request."""
-    
+
     id: UUID
     content: str
     model: str
@@ -122,7 +131,7 @@ class CompletionResponse:
 @dataclass
 class StreamChunk:
     """A chunk of streaming response."""
-    
+
     id: UUID
     delta: str
     finish_reason: Optional[str] = None
@@ -133,7 +142,7 @@ class StreamChunk:
 @dataclass
 class Message:
     """Chat message."""
-    
+
     role: str  # "system", "user", "assistant"
     content: str
     metadata: Optional[Dict[str, Any]] = None
@@ -142,19 +151,19 @@ class Message:
 @dataclass
 class CompletionRequest:
     """Request for completion."""
-    
+
     messages: List[Message]
     model: str
     temperature: float = 0.7
     max_tokens: Optional[int] = 1000
     stream: bool = False
-    
+
     # Advanced parameters
     top_p: Optional[float] = 1.0
     frequency_penalty: Optional[float] = 0.0
     presence_penalty: Optional[float] = 0.0
     stop: Optional[List[str]] = None
-    
+
     # Context
     conversation_id: Optional[UUID] = None
     tenant_id: UUID = None
@@ -165,23 +174,23 @@ class CompletionRequest:
 @dataclass
 class ProviderConfig:
     """Provider configuration."""
-    
+
     name: str
     api_key: str
     base_url: Optional[str] = None
     timeout: int = 30
     max_retries: int = 3
     max_concurrent_requests: int = 10
-    
+
     # Cost configuration (per 1K tokens)
     prompt_cost_per_1k: float = 0.0015  # Default GPT-3.5 pricing
     completion_cost_per_1k: float = 0.002
-    
+
     # Model configuration
     supported_models: List[str] = None
     default_model: str = "default"
     max_context_length: int = 4000
-    
+
     def __post_init__(self):
         if self.supported_models is None:
             self.supported_models = [self.default_model]
@@ -189,11 +198,11 @@ class ProviderConfig:
 
 class ProviderMetrics:
     """Metrics tracking for a provider."""
-    
+
     def __init__(self, provider_name: str):
         self.provider_name = provider_name
         self.reset()
-    
+
     def reset(self):
         """Reset all metrics."""
         self.requests_total = 0
@@ -206,14 +215,14 @@ class ProviderMetrics:
         self.last_request_time = None
         self.last_error_time = None
         self.last_error = None
-    
+
     def record_request(
-        self, 
-        success: bool, 
-        latency_ms: float, 
-        tokens: int = 0, 
+        self,
+        success: bool,
+        latency_ms: float,
+        tokens: int = 0,
         cost: float = 0.0,
-        error: Optional[Exception] = None
+        error: Optional[Exception] = None,
     ):
         """Record a request metric."""
         self.requests_total += 1
@@ -221,7 +230,7 @@ class ProviderMetrics:
         self.total_latency += latency_ms
         self.total_tokens += tokens
         self.total_cost += cost
-        
+
         if success:
             self.requests_successful += 1
         else:
@@ -231,121 +240,116 @@ class ProviderMetrics:
                 self.error_counts[error_type] = self.error_counts.get(error_type, 0) + 1
                 self.last_error_time = time.time()
                 self.last_error = str(error)
-    
+
     @property
     def success_rate(self) -> float:
         """Calculate success rate."""
         if self.requests_total == 0:
             return 1.0
         return self.requests_successful / self.requests_total
-    
+
     @property
     def average_latency(self) -> float:
         """Calculate average latency."""
         if self.requests_total == 0:
             return 0.0
         return self.total_latency / self.requests_total
-    
+
     @property
     def status(self) -> ProviderStatus:
         """Determine provider status based on metrics."""
         # If no recent requests, consider offline
         if self.last_request_time is None:
             return ProviderStatus.OFFLINE
-        
+
         # Check if last request was recent (within 5 minutes)
         if time.time() - self.last_request_time > 300:
             return ProviderStatus.OFFLINE
-        
+
         # Check success rate
         if self.success_rate < 0.5:
             return ProviderStatus.UNHEALTHY
         elif self.success_rate < 0.8:
             return ProviderStatus.DEGRADED
-        
+
         # Check latency (if average > 5 seconds, degraded)
         if self.average_latency > 5000:
             return ProviderStatus.DEGRADED
-        
+
         return ProviderStatus.HEALTHY
 
 
 class BaseProvider(ABC):
     """Base class for all providers."""
-    
+
     def __init__(self, config: ProviderConfig):
         self.config = config
         self.metrics = ProviderMetrics(config.name)
         self._semaphore = asyncio.Semaphore(config.max_concurrent_requests)
-        
+
     @property
     def name(self) -> str:
         """Get provider name."""
         return self.config.name
-    
+
     @property
     def status(self) -> ProviderStatus:
         """Get provider status."""
         return self.metrics.status
-    
+
     def is_healthy(self) -> bool:
         """Check if provider is healthy."""
         return self.status in [ProviderStatus.HEALTHY, ProviderStatus.DEGRADED]
-    
+
     @abstractmethod
     async def _make_request(self, request: CompletionRequest) -> CompletionResponse:
         """Make the actual API request (implemented by subclasses)."""
         pass
-    
+
     @abstractmethod
     async def _make_stream_request(self, request: CompletionRequest) -> AsyncIterator[StreamChunk]:
         """Make streaming API request (implemented by subclasses)."""
         pass
-    
+
     async def complete(self, request: CompletionRequest) -> CompletionResponse:
         """Complete a chat request with retry logic."""
         if request.stream:
             raise ValueError("Use complete_stream() for streaming requests")
-        
+
         @retry(
             retry=retry_if_exception_type((ProviderError, asyncio.TimeoutError)),
             stop=stop_after_attempt(self.config.max_retries),
             wait=wait_exponential(multiplier=1, min=1, max=10),
-            reraise=True
+            reraise=True,
         )
         async def _complete_with_retry():
             async with self._semaphore:  # Rate limit concurrent requests
                 start_time = time.time()
-                
+
                 try:
                     response = await asyncio.wait_for(
-                        self._make_request(request),
-                        timeout=self.config.timeout
+                        self._make_request(request), timeout=self.config.timeout
                     )
-                    
+
                     # Record successful request
                     latency_ms = (time.time() - start_time) * 1000
                     self.metrics.record_request(
                         success=True,
                         latency_ms=latency_ms,
                         tokens=response.usage.total_tokens,
-                        cost=response.usage.total_cost
+                        cost=response.usage.total_cost,
                     )
-                    
+
                     response.latency_ms = latency_ms
                     response.provider = self.name
-                    
+
                     return response
-                    
+
                 except Exception as e:
                     # Record failed request
                     latency_ms = (time.time() - start_time) * 1000
-                    self.metrics.record_request(
-                        success=False,
-                        latency_ms=latency_ms,
-                        error=e
-                    )
-                    
+                    self.metrics.record_request(success=False, latency_ms=latency_ms, error=e)
+
                     # Convert to appropriate ProviderError if needed
                     if not isinstance(e, ProviderError):
                         if isinstance(e, asyncio.TimeoutError):
@@ -353,76 +357,74 @@ class BaseProvider(ABC):
                                 f"Request timeout after {self.config.timeout}s",
                                 error_code="timeout",
                                 retryable=True,
-                                provider_name=self.name
+                                provider_name=self.name,
                             )
                         else:
                             raise ProviderError(
                                 f"Request failed: {str(e)}",
                                 error_code="unknown",
                                 retryable=True,
-                                provider_name=self.name
+                                provider_name=self.name,
                             )
-                    
+
                     # Add provider name if not set
                     if not e.provider_name:
                         e.provider_name = self.name
-                    
+
                     raise
-        
+
         return await _complete_with_retry()
-    
+
     async def complete_stream(self, request: CompletionRequest) -> AsyncIterator[StreamChunk]:
         """Complete a streaming chat request."""
         if not request.stream:
             raise ValueError("Use complete() for non-streaming requests")
-        
+
         async with self._semaphore:
             start_time = time.time()
             chunk_count = 0
             total_tokens = 0
-            
+
             try:
                 async for chunk in self._make_stream_request(request):
                     chunk_count += 1
                     yield chunk
-                
+
                 # Record successful streaming request
                 latency_ms = (time.time() - start_time) * 1000
                 self.metrics.record_request(
                     success=True,
                     latency_ms=latency_ms,
-                    tokens=total_tokens  # Would need to track this in implementation
+                    tokens=total_tokens,  # Would need to track this in implementation
                 )
-                
+
             except Exception as e:
                 # Record failed request
                 latency_ms = (time.time() - start_time) * 1000
-                self.metrics.record_request(
-                    success=False,
-                    latency_ms=latency_ms,
-                    error=e
-                )
-                
+                self.metrics.record_request(success=False, latency_ms=latency_ms, error=e)
+
                 if not isinstance(e, ProviderError):
                     raise ProviderError(
                         f"Streaming request failed: {str(e)}",
                         error_code="stream_error",
                         retryable=False,
-                        provider_name=self.name
+                        provider_name=self.name,
                     )
-                
+
                 raise
-    
+
     def supports_model(self, model: str) -> bool:
         """Check if provider supports a specific model."""
         return model in self.config.supported_models
-    
+
     def calculate_cost(self, usage: TokenUsage) -> TokenUsage:
         """Calculate cost for token usage."""
         usage.prompt_cost = (usage.prompt_tokens / 1000) * self.config.prompt_cost_per_1k
-        usage.completion_cost = (usage.completion_tokens / 1000) * self.config.completion_cost_per_1k
+        usage.completion_cost = (
+            usage.completion_tokens / 1000
+        ) * self.config.completion_cost_per_1k
         return usage
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check."""
         return {
@@ -436,9 +438,9 @@ class BaseProvider(ABC):
                 "total_cost": round(self.metrics.total_cost, 4),
                 "error_counts": self.metrics.error_counts,
                 "last_request_time": self.metrics.last_request_time,
-                "last_error": self.metrics.last_error
+                "last_error": self.metrics.last_error,
             },
             "supported_models": self.config.supported_models,
             "concurrent_limit": self.config.max_concurrent_requests,
-            "timeout": self.config.timeout
+            "timeout": self.config.timeout,
         }

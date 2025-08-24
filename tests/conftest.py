@@ -1,22 +1,43 @@
-"""Pytest configuration for the Chatbot System."""
-import sys
-import os
-from pathlib import Path
+"""Global test configuration and fixtures."""
+import asyncio
+from typing import AsyncGenerator
 
-# Add project root to Python path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / "api"))
-sys.path.insert(0, str(project_root / "app"))
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-# Configure pytest plugins
-pytest_plugins = [
-    "pytest_asyncio",
-]
+from api.core.config import settings
+from api.main import app
 
-def pytest_configure(config):
-    """Configure pytest with custom markers."""
-    config.addinivalue_line("markers", "unit: Unit tests")
-    config.addinivalue_line("markers", "integration: Integration tests")
-    config.addinivalue_line("markers", "e2e: End-to-end tests")
-    config.addinivalue_line("markers", "slow: Slow tests")
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create event loop for async tests."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture
+async def async_client() -> AsyncGenerator[AsyncClient, None]:
+    """Create async HTTP client for testing."""
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture
+async def db_session():
+    """Create database session for testing."""
+    engine = create_async_engine(settings.DATABASE_URL_TEST)
+    async_session = sessionmaker(engine, class_=AsyncSession)
+
+    async with async_session() as session:
+        yield session
+        await session.rollback()
+
+
+@pytest.fixture
+def auth_headers():
+    """Generate authentication headers."""
+    return {"Authorization": "Bearer test-token"}
