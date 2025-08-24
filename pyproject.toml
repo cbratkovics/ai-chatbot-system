@@ -103,21 +103,14 @@ faiss-cpu = "^1.7.4"
 chromadb = "^0.4.20"
 qdrant-client = "^1.7.0"
 
-[tool.poetry.group.ml-gpu]
-optional = true
-
-[tool.poetry.group.ml-gpu.dependencies]
-torch = {version = "^2.1.0", source = "pytorch-gpu"}
-torchvision = {version = "^0.16.0", source = "pytorch-gpu"}
-tensorflow = "^2.15.0"
-accelerate = "^0.25.0"
-bitsandbytes = "^0.41.3"
+# For CI/CD we use CPU-only versions to avoid GPU dependency issues
+# For production deployments, use Docker with appropriate GPU support
 
 [tool.poetry.group.ml-cpu]
 optional = true
 
 [tool.poetry.group.ml-cpu.dependencies]
-torch = {version = "^2.1.0+cpu", source = "pytorch-cpu"}
+torch = {version = ">=2.1.0,<3.0.0", source = "pytorch-cpu"}
 onnxruntime = "^1.16.3"
 tensorflow-cpu = "^2.15.0"
 
@@ -138,11 +131,6 @@ mkdocs = "^1.5.3"
 mkdocs-material = "^9.5.0"
 mkdocstrings = {extras = ["python"], version = "^0.24.0"}
 mkdocs-mermaid2-plugin = "^1.1.1"
-
-[[tool.poetry.source]]
-name = "pytorch-gpu"
-url = "https://download.pytorch.org/whl/cu121"
-priority = "supplemental"
 
 [[tool.poetry.source]]
 name = "pytorch-cpu"
