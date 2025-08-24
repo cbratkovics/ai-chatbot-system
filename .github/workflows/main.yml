@@ -1,0 +1,48 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r config/requirements/base.txt
+        pip install -r config/requirements/dev.txt
+    
+    - name: Run tests
+      run: pytest tests/ -v --cov=api
+    
+    - name: Run linting
+      run: |
+        black --check api/
+        flake8 api/
+    
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build Docker image
+      run: docker build -t chatbot-system:${{ github.sha }} .
+    
+    - name: Run security scan
+      run: |
+        pip install safety
+        safety check
