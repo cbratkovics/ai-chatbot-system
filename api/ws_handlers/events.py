@@ -12,17 +12,17 @@ from pydantic import BaseModel, Field
 
 class EventType(str, Enum):
     """WebSocket event types."""
-    
+
     # Connection events
     CONNECTION_ESTABLISHED = "connection_established"
     CONNECTION_CLOSED = "connection_closed"
     CONNECTION_ERROR = "connection_error"
-    
-    # Authentication events  
+
+    # Authentication events
     AUTH_REQUEST = "auth_request"
     AUTH_SUCCESS = "auth_success"
     AUTH_FAILED = "auth_failed"
-    
+
     # Chat events
     CHAT_MESSAGE = "chat_message"
     CHAT_RESPONSE = "chat_response"
@@ -30,7 +30,7 @@ class EventType(str, Enum):
     CHAT_STREAM_CHUNK = "chat_stream_chunk"
     CHAT_STREAM_END = "chat_stream_end"
     CHAT_ERROR = "chat_error"
-    
+
     # System events
     HEARTBEAT = "heartbeat"
     SYSTEM_MESSAGE = "system_message"
@@ -40,32 +40,29 @@ class EventType(str, Enum):
 
 class WebSocketEvent(BaseModel):
     """Base WebSocket event."""
-    
+
     id: UUID = Field(default_factory=uuid4)
     type: EventType
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     data: Dict[str, Any] = Field(default_factory=dict)
-    
+
     # Connection context
     connection_id: Optional[str] = None
     tenant_id: Optional[UUID] = None
     user_id: Optional[str] = None
-    
+
     class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-            UUID: lambda v: str(v)
-        }
-    
+        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+
     def to_json(self) -> str:
         """Serialize event to JSON string."""
         return self.model_dump_json()
-    
+
     @classmethod
     def from_json(cls, json_str: str) -> "WebSocketEvent":
         """Deserialize event from JSON string."""
         return cls.model_validate_json(json_str)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert event to dictionary."""
         return self.model_dump()
@@ -73,25 +70,21 @@ class WebSocketEvent(BaseModel):
 
 class ConnectionEvent(WebSocketEvent):
     """Connection lifecycle events."""
-    
+
     def __init__(self, event_type: EventType, connection_id: str, **kwargs):
-        super().__init__(
-            type=event_type,
-            connection_id=connection_id,
-            data=kwargs
-        )
+        super().__init__(type=event_type, connection_id=connection_id, data=kwargs)
 
 
 class MessageEvent(WebSocketEvent):
     """Chat message events."""
-    
+
     def __init__(
         self,
         content: str,
         role: str = "user",
         conversation_id: Optional[UUID] = None,
         message_id: Optional[UUID] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             type=EventType.CHAT_MESSAGE,
@@ -100,14 +93,14 @@ class MessageEvent(WebSocketEvent):
                 "role": role,
                 "conversation_id": str(conversation_id) if conversation_id else None,
                 "message_id": str(message_id) if message_id else None,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class ResponseEvent(WebSocketEvent):
     """Chat response events."""
-    
+
     def __init__(
         self,
         content: str,
@@ -116,7 +109,7 @@ class ResponseEvent(WebSocketEvent):
         cached: bool = False,
         conversation_id: Optional[UUID] = None,
         message_id: Optional[UUID] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             type=EventType.CHAT_RESPONSE,
@@ -127,14 +120,14 @@ class ResponseEvent(WebSocketEvent):
                 "cached": cached,
                 "conversation_id": str(conversation_id) if conversation_id else None,
                 "message_id": str(message_id) if message_id else None,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class StreamChunkEvent(WebSocketEvent):
     """Streaming response chunk events."""
-    
+
     def __init__(
         self,
         delta: str,
@@ -142,7 +135,7 @@ class StreamChunkEvent(WebSocketEvent):
         conversation_id: Optional[UUID] = None,
         message_id: Optional[UUID] = None,
         finish_reason: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             type=EventType.CHAT_STREAM_CHUNK,
@@ -152,20 +145,20 @@ class StreamChunkEvent(WebSocketEvent):
                 "conversation_id": str(conversation_id) if conversation_id else None,
                 "message_id": str(message_id) if message_id else None,
                 "finish_reason": finish_reason,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class StreamStartEvent(WebSocketEvent):
     """Stream start event."""
-    
+
     def __init__(
         self,
         model: str,
         conversation_id: Optional[UUID] = None,
         message_id: Optional[UUID] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             type=EventType.CHAT_STREAM_START,
@@ -173,14 +166,14 @@ class StreamStartEvent(WebSocketEvent):
                 "model": model,
                 "conversation_id": str(conversation_id) if conversation_id else None,
                 "message_id": str(message_id) if message_id else None,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class StreamEndEvent(WebSocketEvent):
     """Stream end event."""
-    
+
     def __init__(
         self,
         total_tokens: int,
@@ -188,7 +181,7 @@ class StreamEndEvent(WebSocketEvent):
         latency_ms: float,
         conversation_id: Optional[UUID] = None,
         message_id: Optional[UUID] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             type=EventType.CHAT_STREAM_END,
@@ -198,20 +191,16 @@ class StreamEndEvent(WebSocketEvent):
                 "latency_ms": latency_ms,
                 "conversation_id": str(conversation_id) if conversation_id else None,
                 "message_id": str(message_id) if message_id else None,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class ErrorEvent(WebSocketEvent):
     """Error events."""
-    
+
     def __init__(
-        self,
-        error_message: str,
-        error_code: Optional[str] = None,
-        retryable: bool = True,
-        **kwargs
+        self, error_message: str, error_code: Optional[str] = None, retryable: bool = True, **kwargs
     ):
         super().__init__(
             type=EventType.CHAT_ERROR,
@@ -219,41 +208,31 @@ class ErrorEvent(WebSocketEvent):
                 "error_message": error_message,
                 "error_code": error_code,
                 "retryable": retryable,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class HeartbeatEvent(WebSocketEvent):
     """Heartbeat/keepalive events."""
-    
+
     def __init__(self, server_time: Optional[float] = None, **kwargs):
         super().__init__(
             type=EventType.HEARTBEAT,
-            data={
-                "server_time": server_time or time.time(),
-                "message": "pong",
-                **kwargs
-            }
+            data={"server_time": server_time or time.time(), "message": "pong", **kwargs},
         )
 
 
 class AuthRequestEvent(WebSocketEvent):
     """Authentication request event."""
-    
+
     def __init__(self, token: str, **kwargs):
-        super().__init__(
-            type=EventType.AUTH_REQUEST,
-            data={
-                "token": token,
-                **kwargs
-            }
-        )
+        super().__init__(type=EventType.AUTH_REQUEST, data={"token": token, **kwargs})
 
 
 class AuthSuccessEvent(WebSocketEvent):
     """Authentication success event."""
-    
+
     def __init__(self, user_id: str, tenant_id: UUID, permissions: list = None, **kwargs):
         super().__init__(
             type=EventType.AUTH_SUCCESS,
@@ -262,48 +241,34 @@ class AuthSuccessEvent(WebSocketEvent):
                 "tenant_id": str(tenant_id),
                 "permissions": permissions or [],
                 "authenticated": True,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class AuthFailedEvent(WebSocketEvent):
     """Authentication failed event."""
-    
+
     def __init__(self, reason: str, **kwargs):
         super().__init__(
-            type=EventType.AUTH_FAILED,
-            data={
-                "reason": reason,
-                "authenticated": False,
-                **kwargs
-            }
+            type=EventType.AUTH_FAILED, data={"reason": reason, "authenticated": False, **kwargs}
         )
 
 
 class SystemMessageEvent(WebSocketEvent):
     """System message events."""
-    
+
     def __init__(self, message: str, level: str = "info", **kwargs):
         super().__init__(
-            type=EventType.SYSTEM_MESSAGE,
-            data={
-                "message": message,
-                "level": level,
-                **kwargs
-            }
+            type=EventType.SYSTEM_MESSAGE, data={"message": message, "level": level, **kwargs}
         )
 
 
 class RateLimitWarningEvent(WebSocketEvent):
     """Rate limit warning events."""
-    
+
     def __init__(
-        self,
-        requests_remaining: int,
-        reset_time: datetime,
-        window_seconds: int,
-        **kwargs
+        self, requests_remaining: int, reset_time: datetime, window_seconds: int, **kwargs
     ):
         super().__init__(
             type=EventType.RATE_LIMIT_WARNING,
@@ -312,27 +277,22 @@ class RateLimitWarningEvent(WebSocketEvent):
                 "reset_time": reset_time.isoformat(),
                 "window_seconds": window_seconds,
                 "message": f"Rate limit warning: {requests_remaining} requests remaining",
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 
 class TypingIndicatorEvent(WebSocketEvent):
     """Typing indicator events."""
-    
-    def __init__(
-        self,
-        is_typing: bool,
-        conversation_id: Optional[UUID] = None,
-        **kwargs
-    ):
+
+    def __init__(self, is_typing: bool, conversation_id: Optional[UUID] = None, **kwargs):
         super().__init__(
             type=EventType.TYPING_INDICATOR,
             data={
                 "is_typing": is_typing,
                 "conversation_id": str(conversation_id) if conversation_id else None,
-                **kwargs
-            }
+                **kwargs,
+            },
         )
 
 

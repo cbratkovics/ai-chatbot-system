@@ -200,7 +200,12 @@ class TestCacheManager:
         """Test cache statistics collection."""
         from api.core.cache.cache_manager import CacheManager
 
-        mock_redis.info.return_value = {"used_memory": 1024000, "hits": 1000, "misses": 100, "evicted_keys": 10}
+        mock_redis.info.return_value = {
+            "used_memory": 1024000,
+            "hits": 1000,
+            "misses": 100,
+            "evicted_keys": 10,
+        }
 
         manager = CacheManager(redis_client=mock_redis)
         stats = await manager.get_statistics()

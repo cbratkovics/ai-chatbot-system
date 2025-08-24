@@ -12,7 +12,7 @@ from ..app.config import settings
 
 def setup_structured_logging():
     """Setup structured logging with JSON output."""
-    
+
     # Configure structlog
     structlog.configure(
         processors=[
@@ -32,41 +32,40 @@ def setup_structured_logging():
                 ]
             ),
             structlog.processors.dict_tracebacks,
-            structlog.processors.JSONRenderer()
+            structlog.processors.JSONRenderer(),
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    
+
     # Configure Python logging
     log_level = logging.DEBUG if settings.debug else logging.INFO
-    
+
     # Create JSON formatter
     json_formatter = jsonlogger.JsonFormatter(
-        fmt='%(asctime)s %(name)s %(levelname)s %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        fmt="%(asctime)s %(name)s %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
-    
+
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
-    
+
     # Remove existing handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # Add console handler with JSON formatting
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(json_formatter)
     root_logger.addHandler(console_handler)
-    
+
     # Suppress noisy loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
-    
+
     return structlog.get_logger()
 
 

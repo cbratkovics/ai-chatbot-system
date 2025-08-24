@@ -1,7 +1,7 @@
 """Database module for persistence layer."""
 
-from .models import Base, Tenant, User, Conversation, Message
-from .session import get_db, engine, SessionLocal
+from .models import Base, Conversation, Message, Tenant, User
+from .session import SessionLocal, engine, get_db
 
 __all__ = [
     "Base",

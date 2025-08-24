@@ -9,6 +9,7 @@ def test_basic():
 def test_python_version():
     """Test Python version is correct."""
     import sys
+
     assert sys.version_info >= (3, 11)
 
 
@@ -16,6 +17,7 @@ def test_imports():
     """Test basic imports work."""
     try:
         import app
+
         import api
     except ImportError:
         # If imports fail, just pass the test to keep CI green

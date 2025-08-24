@@ -4,18 +4,20 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
 from ..app.config import settings
-from ..ws_handlers.manager import connection_manager
+
 # WebSocketHandler temporarily disabled due to import issues
 # from ..ws_handlers.handlers import WebSocketHandler
-from ..providers import ProviderOrchestrator, ProviderConfig, ProviderA, ProviderB
+from ..providers import ProviderA, ProviderB, ProviderConfig, ProviderOrchestrator
+from ..ws_handlers.manager import connection_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
 
 # Initialize providers and orchestrator (in production, this would be dependency injected)
 def get_provider_orchestrator() -> ProviderOrchestrator:
@@ -25,22 +27,20 @@ def get_provider_orchestrator() -> ProviderOrchestrator:
         name="provider_a",
         api_key=settings.provider_a_api_key or "mock-key-a",
         timeout=settings.provider_timeout,
-        max_retries=settings.max_retries
+        max_retries=settings.max_retries,
     )
-    
+
     provider_b_config = ProviderConfig(
-        name="provider_b", 
+        name="provider_b",
         api_key=settings.provider_b_api_key or "mock-key-b",
         timeout=settings.provider_timeout,
-        max_retries=settings.max_retries
+        max_retries=settings.max_retries,
     )
-    
-    providers = [
-        ProviderA(provider_a_config),
-        ProviderB(provider_b_config)
-    ]
-    
+
+    providers = [ProviderA(provider_a_config), ProviderB(provider_b_config)]
+
     return ProviderOrchestrator(providers)
+
 
 # Global instances (in production, use dependency injection)
 provider_orchestrator = get_provider_orchestrator()
@@ -53,38 +53,38 @@ async def websocket_endpoint(
     websocket: WebSocket,
     tenant_id: Optional[str] = Query(None, description="Tenant ID for multi-tenancy"),
     user_id: Optional[str] = Query(None, description="User ID for connection tracking"),
-    conversation_id: Optional[str] = Query(None, description="Conversation ID for chat context")
+    conversation_id: Optional[str] = Query(None, description="Conversation ID for chat context"),
 ):
     """
     WebSocket endpoint for real-time chat.
-    
+
     Features:
     - Real-time bidirectional communication
     - Multi-tenant support with isolation
     - User and conversation context tracking
     - Automatic heartbeat and connection management
     - Rate limiting and authentication
-    
+
     Query Parameters:
     - tenant_id: Optional tenant identifier for multi-tenancy
-    - user_id: Optional user identifier for connection tracking  
+    - user_id: Optional user identifier for connection tracking
     - conversation_id: Optional conversation identifier for chat context
-    
+
     Example Usage:
     ```javascript
     const ws = new WebSocket('ws://localhost:8000/api/v1/ws?tenant_id=123&user_id=user456');
-    
+
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log('Received:', data);
     };
-    
+
     // Send authentication
     ws.send(JSON.stringify({
         type: 'auth_request',
         data: { token: 'your-auth-token' }
     }));
-    
+
     // Send chat message
     ws.send(JSON.stringify({
         type: 'chat_message',
@@ -96,11 +96,11 @@ async def websocket_endpoint(
     }));
     ```
     """
-    
+
     # Parse UUID parameters
     tenant_uuid = None
     conversation_uuid = None
-    
+
     try:
         if tenant_id:
             tenant_uuid = UUID(tenant_id)
@@ -109,103 +109,96 @@ async def websocket_endpoint(
     except ValueError as e:
         await websocket.close(code=4000, reason=f"Invalid UUID format: {e}")
         return
-    
+
     connection = None
-    
+
     try:
         # Establish WebSocket connection
         connection = await connection_manager.connect(
             websocket=websocket,
             tenant_id=tenant_uuid,
             user_id=user_id,
-            conversation_id=conversation_uuid
+            conversation_id=conversation_uuid,
         )
-        
+
         logger.info(f"WebSocket connection established: {connection.id}")
-        
+
         # Handle the connection with WebSocket handler
         # await websocket_handler.handle_connection(connection)
         # Temporarily just keep the connection alive
         await websocket.receive_text()
-        
+
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: {connection.id if connection else 'unknown'}")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         if connection:
-            await connection_manager.disconnect(
-                connection.id,
-                code=1011,
-                reason="Server error"
-            )
+            await connection_manager.disconnect(connection.id, code=1011, reason="Server error")
 
 
 @router.get("/ws/stats")
 async def websocket_stats():
     """
     Get WebSocket connection statistics.
-    
+
     Returns detailed statistics about active connections, message throughput,
     and performance metrics.
     """
     return {
         "websocket_stats": connection_manager.get_connection_stats(),
-        "provider_stats": await provider_orchestrator.health_check()
+        "provider_stats": await provider_orchestrator.health_check(),
     }
 
 
 @router.get("/ws/connections")
 async def list_connections(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
-    user_id: Optional[str] = Query(None, description="Filter by user ID")
+    user_id: Optional[str] = Query(None, description="Filter by user ID"),
 ):
     """
     List active WebSocket connections with optional filtering.
-    
+
     Useful for monitoring and debugging connection states.
     """
     connections = []
-    
+
     for connection_id, connection in connection_manager.connections.items():
         # Apply filters
         if tenant_id and str(connection.tenant_id) != tenant_id:
             continue
         if user_id and connection.user_id != user_id:
             continue
-            
-        connections.append({
-            "id": connection.id,
-            "tenant_id": str(connection.tenant_id) if connection.tenant_id else None,
-            "user_id": connection.user_id,
-            "conversation_id": str(connection.conversation_id) if connection.conversation_id else None,
-            "authenticated": connection.authenticated,
-            "connected_at": connection.stats.connected_at,
-            "uptime_seconds": connection.stats.uptime_seconds,
-            "messages_sent": connection.stats.messages_sent,
-            "messages_received": connection.stats.messages_received,
-            "last_activity": connection.stats.last_activity,
-            "subscribed_events": list(connection.subscribed_events)
-        })
-    
+
+        connections.append(
+            {
+                "id": connection.id,
+                "tenant_id": str(connection.tenant_id) if connection.tenant_id else None,
+                "user_id": connection.user_id,
+                "conversation_id": str(connection.conversation_id)
+                if connection.conversation_id
+                else None,
+                "authenticated": connection.authenticated,
+                "connected_at": connection.stats.connected_at,
+                "uptime_seconds": connection.stats.uptime_seconds,
+                "messages_sent": connection.stats.messages_sent,
+                "messages_received": connection.stats.messages_received,
+                "last_activity": connection.stats.last_activity,
+                "subscribed_events": list(connection.subscribed_events),
+            }
+        )
+
     return {
         "connections": connections,
         "total_count": len(connections),
-        "filters": {
-            "tenant_id": tenant_id,
-            "user_id": user_id
-        }
+        "filters": {"tenant_id": tenant_id, "user_id": user_id},
     }
 
 
 @router.post("/ws/broadcast")
-async def broadcast_message(
-    message: str,
-    level: str = "info",
-    tenant_id: Optional[str] = None
-):
+async def broadcast_message(message: str, level: str = "info", tenant_id: Optional[str] = None):
     """
     Broadcast system message to WebSocket connections.
-    
+
     Useful for maintenance notifications, system alerts, etc.
     """
     tenant_uuid = None
@@ -214,7 +207,7 @@ async def broadcast_message(
             tenant_uuid = UUID(tenant_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid tenant_id format")
-    
+
     # Temporarily disabled due to handler import issues
     # await websocket_handler.broadcast_system_message(
     #     message=message,
@@ -222,11 +215,11 @@ async def broadcast_message(
     #     tenant_id=tenant_uuid
     # )
     pass
-    
+
     return {
         "status": "success",
         "message": "Broadcast sent",
-        "target": f"tenant {tenant_id}" if tenant_id else "all connections"
+        "target": f"tenant {tenant_id}" if tenant_id else "all connections",
     }
 
 
@@ -234,7 +227,7 @@ async def broadcast_message(
 async def websocket_test_page():
     """
     Serve a simple HTML page for testing WebSocket functionality.
-    
+
     This is useful for development and testing purposes.
     """
     html_content = f"""
@@ -403,27 +396,26 @@ async def websocket_health():
     """Health check for WebSocket system."""
     stats = connection_manager.get_connection_stats()
     provider_health = await provider_orchestrator.health_check()
-    
+
     # Determine overall health
     is_healthy = (
-        stats["active_connections"] >= 0 and  # Basic sanity check
-        provider_health["orchestrator"]["available_providers"] > 0
+        stats["active_connections"] >= 0
+        and provider_health["orchestrator"]["available_providers"] > 0  # Basic sanity check
     )
-    
+
     return {
         "status": "healthy" if is_healthy else "degraded",
         "websocket_manager": {
             "status": "healthy",
             "active_connections": stats["active_connections"],
-            "total_connections": stats["total_connections"]
+            "total_connections": stats["total_connections"],
         },
         "provider_orchestrator": {
-            "status": "healthy" if provider_health["orchestrator"]["available_providers"] > 0 else "degraded",
+            "status": "healthy"
+            if provider_health["orchestrator"]["available_providers"] > 0
+            else "degraded",
             "available_providers": provider_health["orchestrator"]["available_providers"],
-            "total_providers": provider_health["orchestrator"]["total_providers"]
+            "total_providers": provider_health["orchestrator"]["total_providers"],
         },
-        "background_tasks": {
-            "heartbeat": "running",
-            "cleanup": "running"
-        }
+        "background_tasks": {"heartbeat": "running", "cleanup": "running"},
     }

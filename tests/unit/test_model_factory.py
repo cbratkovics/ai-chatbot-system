@@ -102,7 +102,9 @@ class TestOpenAIProvider:
         assert provider.supported_models is not None
 
     @pytest.mark.asyncio
-    async def test_chat_completion(self, mock_openai_client, sample_chat_request, sample_chat_response):
+    async def test_chat_completion(
+        self, mock_openai_client, sample_chat_request, sample_chat_response
+    ):
         """Test chat completion request."""
         from api.core.models.openai_provider import OpenAIProvider
 
@@ -337,7 +339,9 @@ class TestFallbackHandler:
         secondary = AsyncMock()
         secondary.chat_completion.return_value = {"response": "Success"}
 
-        handler = FallbackHandler(primary=primary, secondary=secondary, metrics_collector=mock_metrics_collector)
+        handler = FallbackHandler(
+            primary=primary, secondary=secondary, metrics_collector=mock_metrics_collector
+        )
 
         await handler.execute_with_fallback({"message": "test"})
 

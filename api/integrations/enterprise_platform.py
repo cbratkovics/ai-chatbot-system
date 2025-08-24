@@ -4,41 +4,52 @@ REST/GraphQL APIs, webhook system, SDK examples, and enterprise connectors
 """
 
 import asyncio
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import time
 import uuid
-from typing import Dict, List, Optional, Any, Set, Callable, Union
-from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
-from enum import Enum
-import hashlib
-import hmac
-import base64
-import jwt
-import httpx
-import aiohttp
-from aiohttp import web
-import graphql
-from graphql import GraphQLSchema, GraphQLObjectType, GraphQLField, GraphQLString, GraphQLList, GraphQLInt, GraphQLFloat, GraphQLBoolean
-from graphql.execution.executors.asyncio import AsyncioExecutor
-from ariadne import QueryType, make_executable_schema, graphql_sync
-from ariadne.asgi import GraphQL
-import pydantic
-from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException, Depends, Header, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.middleware.cors import CORSMiddleware
-import sqlalchemy
-from sqlalchemy import create_engine, Column, String, DateTime, Text, Boolean, Integer, Float, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-import redis.asyncio as redis
-from celery import Celery
-import requests
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Set, Union
+
+import aiohttp
+import graphql
+import httpx
+import jwt
+import pydantic
+import redis.asyncio as redis
+import requests
+import sqlalchemy
+from aiohttp import web
+from ariadne import QueryType, graphql_sync, make_executable_schema
+from ariadne.asgi import GraphQL
+from celery import Celery
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from graphql import (
+    GraphQLBoolean,
+    GraphQLField,
+    GraphQLFloat,
+    GraphQLInt,
+    GraphQLList,
+    GraphQLObjectType,
+    GraphQLSchema,
+    GraphQLString,
+)
+from graphql.execution.executors.asyncio import AsyncioExecutor
+from pydantic import BaseModel, Field
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, Text, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
+
 
 class IntegrationType(Enum):
     REST_API = "rest_api"
@@ -50,6 +61,7 @@ class IntegrationType(Enum):
     LDAP = "ldap"
     SCIM = "scim"
 
+
 class WebhookEvent(Enum):
     MESSAGE_SENT = "message.sent"
     MESSAGE_RECEIVED = "message.received"
@@ -60,6 +72,7 @@ class WebhookEvent(Enum):
     SYSTEM_ALERT = "system.alert"
     COMPLIANCE_VIOLATION = "compliance.violation"
 
+
 class AuthenticationMethod(Enum):
     API_KEY = "api_key"
     JWT_BEARER = "jwt_bearer"
@@ -68,6 +81,7 @@ class AuthenticationMethod(Enum):
     BASIC_AUTH = "basic_auth"
     MUTUAL_TLS = "mutual_tls"
 
+
 # Pydantic models for REST API
 class ChatSessionCreate(BaseModel):
     model: str = Field(..., description="AI model to use")
@@ -75,6 +89,7 @@ class ChatSessionCreate(BaseModel):
     max_tokens: int = Field(1000, ge=1, le=32000)
     system_prompt: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
 
 class ChatSessionResponse(BaseModel):
     id: str
@@ -87,11 +102,13 @@ class ChatSessionResponse(BaseModel):
     total_tokens: int
     total_cost: float
 
+
 class MessageSend(BaseModel):
     content: str = Field(..., max_length=32000)
     stream: bool = False
     attachments: List[Dict[str, Any]] = Field(default_factory=list)
     context: Dict[str, Any] = Field(default_factory=dict)
+
 
 class MessageResponse(BaseModel):
     id: str
@@ -102,6 +119,7 @@ class MessageResponse(BaseModel):
     metadata: Dict[str, Any]
     created_at: datetime
 
+
 class WebhookConfig(BaseModel):
     url: str = Field(..., description="Webhook endpoint URL")
     events: List[WebhookEvent] = Field(..., description="Events to subscribe to")
@@ -110,6 +128,7 @@ class WebhookConfig(BaseModel):
     retry_count: int = Field(3, ge=0, le=10)
     timeout: int = Field(30, ge=1, le=300)
     active: bool = True
+
 
 @dataclass
 class APIKey:
@@ -122,6 +141,7 @@ class APIKey:
     expires_at: Optional[datetime]
     last_used: Optional[datetime]
     is_active: bool
+
 
 @dataclass
 class WebhookDelivery:
@@ -137,12 +157,14 @@ class WebhookDelivery:
     failed: bool
     error_message: Optional[str]
 
+
 # SQLAlchemy models
 Base = declarative_base()
 
+
 class IntegrationConfig(Base):
     __tablename__ = "integration_configs"
-    
+
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
     integration_type = Column(String, nullable=False)
@@ -152,9 +174,10 @@ class IntegrationConfig(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
+
 class WebhookEndpoint(Base):
     __tablename__ = "webhook_endpoints"
-    
+
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
     url = Column(String, nullable=False)
@@ -166,9 +189,10 @@ class WebhookEndpoint(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class WebhookDeliveryLog(Base):
     __tablename__ = "webhook_deliveries"
-    
+
     id = Column(String, primary_key=True)
     webhook_id = Column(String, nullable=False)
     event = Column(String, nullable=False)
@@ -182,321 +206,313 @@ class WebhookDeliveryLog(Base):
     error_message = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class EnterpriseIntegrationPlatform:
     """
     Comprehensive enterprise integration platform with multiple protocols and standards
     """
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        
+
         # Database
-        self.engine = create_engine(config['database_url'])
+        self.engine = create_engine(config["database_url"])
         Base.metadata.create_all(self.engine)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
+
         # Redis for caching and job queues
-        self.redis = redis.from_url(config['redis_url'])
-        
+        self.redis = redis.from_url(config["redis_url"])
+
         # Celery for background tasks
-        self.celery = Celery('enterprise_integration')
+        self.celery = Celery("enterprise_integration")
         self.celery.conf.update(
-            broker_url=config['redis_url'],
-            result_backend=config['redis_url'],
-            task_serializer='json',
-            result_serializer='json',
-            accept_content=['json']
+            broker_url=config["redis_url"],
+            result_backend=config["redis_url"],
+            task_serializer="json",
+            result_serializer="json",
+            accept_content=["json"],
         )
-        
+
         # FastAPI app for REST API
         self.rest_app = FastAPI(
             title="AI Chatbot Enterprise API",
             description="Enterprise-grade REST API for AI chatbot system",
-            version="2.0.0"
+            version="2.0.0",
         )
-        
+
         # GraphQL schema
         self.graphql_schema = None
-        
+
         # Webhook management
         self.webhook_endpoints: Dict[str, WebhookConfig] = {}
         self.webhook_queue = asyncio.Queue()
-        
+
         # API key management
         self.api_keys: Dict[str, APIKey] = {}
-        
+
         # Rate limiting
         self.rate_limiters: Dict[str, Dict[str, Any]] = {}
-        
+
         # Setup FastAPI
         self._setup_fastapi()
-        
+
         # Setup GraphQL
         self._setup_graphql()
-        
+
         # Setup webhooks
         self._setup_webhooks()
-        
+
     async def initialize(self):
         """Initialize the integration platform"""
-        
+
         # Load API keys
         await self._load_api_keys()
-        
+
         # Load webhook configurations
         await self._load_webhook_configs()
-        
+
         # Start background tasks
         asyncio.create_task(self._webhook_delivery_worker())
         asyncio.create_task(self._webhook_retry_worker())
         asyncio.create_task(self._cleanup_old_deliveries())
-        
+
         logger.info("Enterprise Integration Platform initialized")
-        
+
     def _setup_fastapi(self):
         """Setup FastAPI application with all endpoints"""
-        
+
         # CORS middleware
         self.rest_app.add_middleware(
             CORSMiddleware,
-            allow_origins=self.config.get('cors_origins', ['*']),
+            allow_origins=self.config.get("cors_origins", ["*"]),
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
         )
-        
+
         # Authentication dependency
         security = HTTPBearer()
-        
+
         async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
             """Authenticate API requests"""
             return await self._authenticate_request(credentials.credentials)
-            
+
         # Chat Sessions API
         @self.rest_app.post("/api/v2/chat/sessions", response_model=ChatSessionResponse)
-        async def create_chat_session(
-            session: ChatSessionCreate,
-            user=Depends(get_current_user)
-        ):
+        async def create_chat_session(session: ChatSessionCreate, user=Depends(get_current_user)):
             """Create a new chat session"""
             try:
                 # Create session logic here
                 session_id = str(uuid.uuid4())
-                
+
                 session_data = {
-                    'id': session_id,
-                    'user_id': user['user_id'],
-                    'status': 'active',
-                    'config': {
-                        'model': session.model,
-                        'temperature': session.temperature,
-                        'max_tokens': session.max_tokens,
-                        'system_prompt': session.system_prompt
+                    "id": session_id,
+                    "user_id": user["user_id"],
+                    "status": "active",
+                    "config": {
+                        "model": session.model,
+                        "temperature": session.temperature,
+                        "max_tokens": session.max_tokens,
+                        "system_prompt": session.system_prompt,
                     },
-                    'created_at': datetime.now(timezone.utc),
-                    'updated_at': datetime.now(timezone.utc),
-                    'message_count': 0,
-                    'total_tokens': 0,
-                    'total_cost': 0.0
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc),
+                    "message_count": 0,
+                    "total_tokens": 0,
+                    "total_cost": 0.0,
                 }
-                
+
                 # Store in database
                 await self._store_session(session_data)
-                
+
                 # Trigger webhook
-                await self._trigger_webhook(WebhookEvent.SESSION_STARTED, {
-                    'session_id': session_id,
-                    'user_id': user['user_id'],
-                    'config': session_data['config']
-                })
-                
+                await self._trigger_webhook(
+                    WebhookEvent.SESSION_STARTED,
+                    {
+                        "session_id": session_id,
+                        "user_id": user["user_id"],
+                        "config": session_data["config"],
+                    },
+                )
+
                 return ChatSessionResponse(**session_data)
-                
+
             except Exception as e:
                 logger.error(f"Session creation error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-                
+
         @self.rest_app.get("/api/v2/chat/sessions/{session_id}", response_model=ChatSessionResponse)
-        async def get_chat_session(
-            session_id: str,
-            user=Depends(get_current_user)
-        ):
+        async def get_chat_session(session_id: str, user=Depends(get_current_user)):
             """Get chat session details"""
             try:
-                session_data = await self._get_session(session_id, user['user_id'])
+                session_data = await self._get_session(session_id, user["user_id"])
                 if not session_data:
                     raise HTTPException(status_code=404, detail="Session not found")
-                    
+
                 return ChatSessionResponse(**session_data)
-                
+
             except HTTPException:
                 raise
             except Exception as e:
                 logger.error(f"Session retrieval error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-                
-        @self.rest_app.post("/api/v2/chat/sessions/{session_id}/messages", response_model=MessageResponse)
+
+        @self.rest_app.post(
+            "/api/v2/chat/sessions/{session_id}/messages", response_model=MessageResponse
+        )
         async def send_message(
-            session_id: str,
-            message: MessageSend,
-            user=Depends(get_current_user)
+            session_id: str, message: MessageSend, user=Depends(get_current_user)
         ):
             """Send a message in chat session"""
             try:
                 # Validate session
-                session_data = await self._get_session(session_id, user['user_id'])
+                session_data = await self._get_session(session_id, user["user_id"])
                 if not session_data:
                     raise HTTPException(status_code=404, detail="Session not found")
-                    
+
                 # Process message
                 message_id = str(uuid.uuid4())
-                
+
                 # This would integrate with the AI service
                 ai_response = await self._process_ai_message(
-                    session_data,
-                    message.content,
-                    message.context
+                    session_data, message.content, message.context
                 )
-                
+
                 message_data = {
-                    'id': message_id,
-                    'session_id': session_id,
-                    'role': 'assistant',
-                    'content': ai_response['content'],
-                    'attachments': [],
-                    'metadata': {
-                        'model': session_data['config']['model'],
-                        'tokens': ai_response.get('tokens', 0),
-                        'cost': ai_response.get('cost', 0.0),
-                        'response_time': ai_response.get('response_time', 0.0)
+                    "id": message_id,
+                    "session_id": session_id,
+                    "role": "assistant",
+                    "content": ai_response["content"],
+                    "attachments": [],
+                    "metadata": {
+                        "model": session_data["config"]["model"],
+                        "tokens": ai_response.get("tokens", 0),
+                        "cost": ai_response.get("cost", 0.0),
+                        "response_time": ai_response.get("response_time", 0.0),
                     },
-                    'created_at': datetime.now(timezone.utc)
+                    "created_at": datetime.now(timezone.utc),
                 }
-                
+
                 # Store message
                 await self._store_message(message_data)
-                
+
                 # Trigger webhook
-                await self._trigger_webhook(WebhookEvent.MESSAGE_SENT, {
-                    'message_id': message_id,
-                    'session_id': session_id,
-                    'content': message_data['content'],
-                    'metadata': message_data['metadata']
-                })
-                
+                await self._trigger_webhook(
+                    WebhookEvent.MESSAGE_SENT,
+                    {
+                        "message_id": message_id,
+                        "session_id": session_id,
+                        "content": message_data["content"],
+                        "metadata": message_data["metadata"],
+                    },
+                )
+
                 return MessageResponse(**message_data)
-                
+
             except HTTPException:
                 raise
             except Exception as e:
                 logger.error(f"Message processing error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-                
+
         # Webhook Management API
         @self.rest_app.post("/api/v2/webhooks")
-        async def create_webhook(
-            webhook: WebhookConfig,
-            user=Depends(get_current_user)
-        ):
+        async def create_webhook(webhook: WebhookConfig, user=Depends(get_current_user)):
             """Create webhook endpoint"""
             try:
                 webhook_id = str(uuid.uuid4())
-                
+
                 # Store webhook configuration
                 db = self.SessionLocal()
                 try:
                     webhook_endpoint = WebhookEndpoint(
                         id=webhook_id,
-                        user_id=user['user_id'],
+                        user_id=user["user_id"],
                         url=webhook.url,
                         secret=webhook.secret,
                         events=[event.value for event in webhook.events],
                         headers=webhook.headers,
                         retry_count=webhook.retry_count,
                         timeout=webhook.timeout,
-                        is_active=webhook.active
+                        is_active=webhook.active,
                     )
                     db.add(webhook_endpoint)
                     db.commit()
-                    
-                    return {'webhook_id': webhook_id, 'status': 'created'}
-                    
+
+                    return {"webhook_id": webhook_id, "status": "created"}
+
                 finally:
                     db.close()
-                    
+
             except Exception as e:
                 logger.error(f"Webhook creation error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-                
+
         @self.rest_app.get("/api/v2/webhooks")
         async def list_webhooks(user=Depends(get_current_user)):
             """List user's webhooks"""
             try:
                 db = self.SessionLocal()
                 try:
-                    webhooks = db.query(WebhookEndpoint).filter(
-                        WebhookEndpoint.user_id == user['user_id']
-                    ).all()
-                    
+                    webhooks = (
+                        db.query(WebhookEndpoint)
+                        .filter(WebhookEndpoint.user_id == user["user_id"])
+                        .all()
+                    )
+
                     return {
-                        'webhooks': [
+                        "webhooks": [
                             {
-                                'id': wh.id,
-                                'url': wh.url,
-                                'events': wh.events,
-                                'is_active': wh.is_active,
-                                'created_at': wh.created_at.isoformat()
+                                "id": wh.id,
+                                "url": wh.url,
+                                "events": wh.events,
+                                "is_active": wh.is_active,
+                                "created_at": wh.created_at.isoformat(),
                             }
                             for wh in webhooks
                         ]
                     }
-                    
+
                 finally:
                     db.close()
-                    
+
             except Exception as e:
                 logger.error(f"Webhook listing error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-                
+
         # Analytics API
         @self.rest_app.get("/api/v2/analytics/usage")
         async def get_usage_analytics(
-            start_date: str,
-            end_date: str,
-            user=Depends(get_current_user)
+            start_date: str, end_date: str, user=Depends(get_current_user)
         ):
             """Get usage analytics"""
             try:
                 # Parse dates
                 start = datetime.fromisoformat(start_date)
                 end = datetime.fromisoformat(end_date)
-                
+
                 # Generate analytics
-                analytics = await self._generate_usage_analytics(
-                    user['user_id'],
-                    start,
-                    end
-                )
-                
+                analytics = await self._generate_usage_analytics(user["user_id"], start, end)
+
                 return analytics
-                
+
             except Exception as e:
                 logger.error(f"Analytics error: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-                
+
         # Health check
         @self.rest_app.get("/health")
         async def health_check():
             """Health check endpoint"""
             return {
-                'status': 'healthy',
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'version': '2.0.0'
+                "status": "healthy",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": "2.0.0",
             }
-            
+
     def _setup_graphql(self):
         """Setup GraphQL schema and resolvers"""
-        
+
         # Define GraphQL schema
         type_defs = """
             type Query {
@@ -618,335 +634,337 @@ class EnterpriseIntegrationPlatform:
                 size: Int
             }
         """
-        
+
         # Query resolvers
         query = QueryType()
-        
+
         @query.field("chatSessions")
         async def resolve_chat_sessions(_, info, limit=20, offset=0):
-            user = info.context['user']
-            return await self._get_user_sessions(user['user_id'], limit, offset)
-            
+            user = info.context["user"]
+            return await self._get_user_sessions(user["user_id"], limit, offset)
+
         @query.field("chatSession")
         async def resolve_chat_session(_, info, id):
-            user = info.context['user']
-            return await self._get_session(id, user['user_id'])
-            
+            user = info.context["user"]
+            return await self._get_session(id, user["user_id"])
+
         @query.field("messages")
         async def resolve_messages(_, info, sessionId, limit=50, offset=0):
-            user = info.context['user']
-            return await self._get_session_messages(sessionId, user['user_id'], limit, offset)
-            
+            user = info.context["user"]
+            return await self._get_session_messages(sessionId, user["user_id"], limit, offset)
+
         @query.field("usageAnalytics")
         async def resolve_usage_analytics(_, info, startDate, endDate):
-            user = info.context['user']
+            user = info.context["user"]
             start = datetime.fromisoformat(startDate)
             end = datetime.fromisoformat(endDate)
-            return await self._generate_usage_analytics(user['user_id'], start, end)
-            
+            return await self._generate_usage_analytics(user["user_id"], start, end)
+
         # Create executable schema
         self.graphql_schema = make_executable_schema(type_defs, query)
-        
+
     def _setup_webhooks(self):
         """Setup webhook delivery system"""
-        
+
         @self.celery.task
         def deliver_webhook(webhook_id: str, event: str, payload: Dict[str, Any]):
             """Celery task for webhook delivery"""
             asyncio.run(self._deliver_webhook_task(webhook_id, event, payload))
-            
+
         self.deliver_webhook_task = deliver_webhook
-        
+
     async def _authenticate_request(self, token: str) -> Dict[str, Any]:
         """Authenticate API request"""
         try:
             # Check if it's an API key
-            if token.startswith('sk_'):
+            if token.startswith("sk_"):
                 api_key = self.api_keys.get(token)
                 if not api_key or not api_key.is_active:
                     raise HTTPException(status_code=401, detail="Invalid API key")
-                    
+
                 # Check rate limits
                 if not await self._check_rate_limit(api_key):
                     raise HTTPException(status_code=429, detail="Rate limit exceeded")
-                    
-                return {
-                    'user_id': api_key.id,
-                    'auth_method': 'api_key',
-                    'scopes': api_key.scopes
-                }
-                
+
+                return {"user_id": api_key.id, "auth_method": "api_key", "scopes": api_key.scopes}
+
             # Check if it's a JWT token
             else:
-                payload = jwt.decode(
-                    token,
-                    self.config['jwt_secret'],
-                    algorithms=['HS256']
-                )
-                
+                payload = jwt.decode(token, self.config["jwt_secret"], algorithms=["HS256"])
+
                 return {
-                    'user_id': payload.get('user_id'),
-                    'auth_method': 'jwt',
-                    'scopes': payload.get('scopes', [])
+                    "user_id": payload.get("user_id"),
+                    "auth_method": "jwt",
+                    "scopes": payload.get("scopes", []),
                 }
-                
+
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
         except Exception as e:
             logger.error(f"Authentication error: {e}")
             raise HTTPException(status_code=401, detail="Authentication failed")
-            
+
     async def _check_rate_limit(self, api_key: APIKey) -> bool:
         """Check API key rate limits"""
         try:
             current_time = time.time()
             window_size = 3600  # 1 hour
-            
+
             rate_key = f"rate_limit:{api_key.id}"
-            
+
             # Get current usage
             usage = await self.redis.hgetall(rate_key)
-            
+
             if usage:
-                window_start = float(usage.get('window_start', 0))
-                request_count = int(usage.get('count', 0))
-                
+                window_start = float(usage.get("window_start", 0))
+                request_count = int(usage.get("count", 0))
+
                 if current_time - window_start < window_size:
                     if request_count >= api_key.rate_limit:
                         return False
                     else:
-                        await self.redis.hincrby(rate_key, 'count', 1)
+                        await self.redis.hincrby(rate_key, "count", 1)
                         await self.redis.expire(rate_key, window_size)
                 else:
                     # New window
-                    await self.redis.hset(rate_key, mapping={
-                        'window_start': current_time,
-                        'count': 1
-                    })
+                    await self.redis.hset(
+                        rate_key, mapping={"window_start": current_time, "count": 1}
+                    )
                     await self.redis.expire(rate_key, window_size)
             else:
                 # First request
-                await self.redis.hset(rate_key, mapping={
-                    'window_start': current_time,
-                    'count': 1
-                })
+                await self.redis.hset(rate_key, mapping={"window_start": current_time, "count": 1})
                 await self.redis.expire(rate_key, window_size)
-                
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Rate limit check error: {e}")
             return True  # Allow on error
-            
+
     async def _trigger_webhook(self, event: WebhookEvent, payload: Dict[str, Any]):
         """Trigger webhook delivery"""
         try:
             # Find matching webhook endpoints
             db = self.SessionLocal()
             try:
-                webhooks = db.query(WebhookEndpoint).filter(
-                    WebhookEndpoint.is_active == True,
-                    WebhookEndpoint.events.contains([event.value])
-                ).all()
-                
+                webhooks = (
+                    db.query(WebhookEndpoint)
+                    .filter(
+                        WebhookEndpoint.is_active == True,
+                        WebhookEndpoint.events.contains([event.value]),
+                    )
+                    .all()
+                )
+
                 # Queue webhook deliveries
                 for webhook in webhooks:
                     delivery_id = str(uuid.uuid4())
-                    
+
                     delivery = WebhookDeliveryLog(
                         id=delivery_id,
                         webhook_id=webhook.id,
                         event=event.value,
                         payload=payload,
-                        url=webhook.url
+                        url=webhook.url,
                     )
                     db.add(delivery)
-                    
+
                     # Queue for delivery
-                    await self.webhook_queue.put({
-                        'delivery_id': delivery_id,
-                        'webhook_id': webhook.id,
-                        'url': webhook.url,
-                        'secret': webhook.secret,
-                        'headers': webhook.headers or {},
-                        'timeout': webhook.timeout,
-                        'event': event.value,
-                        'payload': payload
-                    })
-                    
+                    await self.webhook_queue.put(
+                        {
+                            "delivery_id": delivery_id,
+                            "webhook_id": webhook.id,
+                            "url": webhook.url,
+                            "secret": webhook.secret,
+                            "headers": webhook.headers or {},
+                            "timeout": webhook.timeout,
+                            "event": event.value,
+                            "payload": payload,
+                        }
+                    )
+
                 db.commit()
-                
+
             finally:
                 db.close()
-                
+
         except Exception as e:
             logger.error(f"Webhook trigger error: {e}")
-            
+
     async def _webhook_delivery_worker(self):
         """Background worker for webhook delivery"""
         while True:
             try:
                 # Get webhook from queue
                 webhook_data = await self.webhook_queue.get()
-                
+
                 # Deliver webhook
                 await self._deliver_webhook(webhook_data)
-                
+
             except Exception as e:
                 logger.error(f"Webhook delivery worker error: {e}")
                 await asyncio.sleep(1)
-                
+
     async def _deliver_webhook(self, webhook_data: Dict[str, Any]):
         """Deliver webhook to endpoint"""
         try:
-            delivery_id = webhook_data['delivery_id']
-            url = webhook_data['url']
-            secret = webhook_data['secret']
-            headers = webhook_data['headers']
-            timeout = webhook_data['timeout']
-            payload = webhook_data['payload']
-            event = webhook_data['event']
-            
+            delivery_id = webhook_data["delivery_id"]
+            url = webhook_data["url"]
+            secret = webhook_data["secret"]
+            headers = webhook_data["headers"]
+            timeout = webhook_data["timeout"]
+            payload = webhook_data["payload"]
+            event = webhook_data["event"]
+
             # Prepare payload
             webhook_payload = {
-                'event': event,
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'data': payload
+                "event": event,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": payload,
             }
-            
+
             # Generate signature if secret provided
             if secret:
                 signature = hmac.new(
-                    secret.encode(),
-                    json.dumps(webhook_payload).encode(),
-                    hashlib.sha256
+                    secret.encode(), json.dumps(webhook_payload).encode(), hashlib.sha256
                 ).hexdigest()
-                headers['X-Webhook-Signature'] = f"sha256={signature}"
-                
+                headers["X-Webhook-Signature"] = f"sha256={signature}"
+
             # Set default headers
-            headers.update({
-                'Content-Type': 'application/json',
-                'User-Agent': 'AI-Chatbot-Webhook/1.0'
-            })
-            
+            headers.update(
+                {"Content-Type": "application/json", "User-Agent": "AI-Chatbot-Webhook/1.0"}
+            )
+
             # Make HTTP request
             async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(
-                    url,
-                    json=webhook_payload,
-                    headers=headers
-                )
-                
+                response = await client.post(url, json=webhook_payload, headers=headers)
+
                 # Update delivery status
                 db = self.SessionLocal()
                 try:
-                    delivery = db.query(WebhookDeliveryLog).filter(
-                        WebhookDeliveryLog.id == delivery_id
-                    ).first()
-                    
+                    delivery = (
+                        db.query(WebhookDeliveryLog)
+                        .filter(WebhookDeliveryLog.id == delivery_id)
+                        .first()
+                    )
+
                     if delivery:
                         delivery.status_code = response.status_code
                         delivery.response_body = response.text[:1000]  # Limit size
                         delivery.attempts += 1
-                        
+
                         if 200 <= response.status_code < 300:
                             delivery.delivered_at = datetime.now(timezone.utc)
                             delivery.failed = False
                         else:
                             delivery.failed = True
                             delivery.error_message = f"HTTP {response.status_code}"
-                            
+
                         db.commit()
-                        
+
                 finally:
                     db.close()
-                    
+
                 logger.info(f"Webhook delivered to {url}: {response.status_code}")
-                
+
         except Exception as e:
             logger.error(f"Webhook delivery error: {e}")
-            
+
             # Mark delivery as failed
             db = self.SessionLocal()
             try:
-                delivery = db.query(WebhookDeliveryLog).filter(
-                    WebhookDeliveryLog.id == webhook_data['delivery_id']
-                ).first()
-                
+                delivery = (
+                    db.query(WebhookDeliveryLog)
+                    .filter(WebhookDeliveryLog.id == webhook_data["delivery_id"])
+                    .first()
+                )
+
                 if delivery:
                     delivery.failed = True
                     delivery.error_message = str(e)
                     delivery.attempts += 1
                     db.commit()
-                    
+
             finally:
                 db.close()
-                
+
     async def _webhook_retry_worker(self):
         """Background worker for webhook retries"""
         while True:
             try:
                 await asyncio.sleep(300)  # Check every 5 minutes
-                
+
                 # Find failed deliveries to retry
                 db = self.SessionLocal()
                 try:
-                    failed_deliveries = db.query(WebhookDeliveryLog).filter(
-                        WebhookDeliveryLog.failed == True,
-                        WebhookDeliveryLog.attempts < 3,
-                        WebhookDeliveryLog.created_at > datetime.utcnow() - timedelta(hours=24)
-                    ).limit(100).all()
-                    
+                    failed_deliveries = (
+                        db.query(WebhookDeliveryLog)
+                        .filter(
+                            WebhookDeliveryLog.failed == True,
+                            WebhookDeliveryLog.attempts < 3,
+                            WebhookDeliveryLog.created_at > datetime.utcnow() - timedelta(hours=24),
+                        )
+                        .limit(100)
+                        .all()
+                    )
+
                     for delivery in failed_deliveries:
                         # Get webhook config
-                        webhook = db.query(WebhookEndpoint).filter(
-                            WebhookEndpoint.id == delivery.webhook_id
-                        ).first()
-                        
+                        webhook = (
+                            db.query(WebhookEndpoint)
+                            .filter(WebhookEndpoint.id == delivery.webhook_id)
+                            .first()
+                        )
+
                         if webhook and webhook.is_active:
                             # Queue for retry
-                            await self.webhook_queue.put({
-                                'delivery_id': delivery.id,
-                                'webhook_id': webhook.id,
-                                'url': webhook.url,
-                                'secret': webhook.secret,
-                                'headers': webhook.headers or {},
-                                'timeout': webhook.timeout,
-                                'event': delivery.event,
-                                'payload': delivery.payload
-                            })
-                            
+                            await self.webhook_queue.put(
+                                {
+                                    "delivery_id": delivery.id,
+                                    "webhook_id": webhook.id,
+                                    "url": webhook.url,
+                                    "secret": webhook.secret,
+                                    "headers": webhook.headers or {},
+                                    "timeout": webhook.timeout,
+                                    "event": delivery.event,
+                                    "payload": delivery.payload,
+                                }
+                            )
+
                 finally:
                     db.close()
-                    
+
             except Exception as e:
                 logger.error(f"Webhook retry worker error: {e}")
-                
+
     async def _cleanup_old_deliveries(self):
         """Cleanup old webhook deliveries"""
         while True:
             try:
                 await asyncio.sleep(86400)  # Daily cleanup
-                
+
                 cutoff_date = datetime.utcnow() - timedelta(days=30)
-                
+
                 db = self.SessionLocal()
                 try:
-                    deleted_count = db.query(WebhookDeliveryLog).filter(
-                        WebhookDeliveryLog.created_at < cutoff_date
-                    ).delete()
-                    
+                    deleted_count = (
+                        db.query(WebhookDeliveryLog)
+                        .filter(WebhookDeliveryLog.created_at < cutoff_date)
+                        .delete()
+                    )
+
                     db.commit()
-                    
+
                     if deleted_count > 0:
                         logger.info(f"Cleaned up {deleted_count} old webhook deliveries")
-                        
+
                 finally:
                     db.close()
-                    
+
             except Exception as e:
                 logger.error(f"Webhook cleanup error: {e}")
-                
+
     async def _load_api_keys(self):
         """Load API keys from database"""
         try:
@@ -961,23 +979,21 @@ class EnterpriseIntegrationPlatform:
                 created_at=datetime.now(timezone.utc),
                 expires_at=None,
                 last_used=None,
-                is_active=True
+                is_active=True,
             )
-            
+
             self.api_keys[sample_key.key] = sample_key
-            
+
         except Exception as e:
             logger.error(f"API key loading error: {e}")
-            
+
     async def _load_webhook_configs(self):
         """Load webhook configurations from database"""
         try:
             db = self.SessionLocal()
             try:
-                webhooks = db.query(WebhookEndpoint).filter(
-                    WebhookEndpoint.is_active == True
-                ).all()
-                
+                webhooks = db.query(WebhookEndpoint).filter(WebhookEndpoint.is_active == True).all()
+
                 for webhook in webhooks:
                     self.webhook_endpoints[webhook.id] = WebhookConfig(
                         url=webhook.url,
@@ -986,15 +1002,15 @@ class EnterpriseIntegrationPlatform:
                         headers=webhook.headers or {},
                         retry_count=webhook.retry_count,
                         timeout=webhook.timeout,
-                        active=webhook.is_active
+                        active=webhook.is_active,
                     )
-                    
+
             finally:
                 db.close()
-                
+
         except Exception as e:
             logger.error(f"Webhook config loading error: {e}")
-            
+
     async def _store_session(self, session_data: Dict[str, Any]):
         """Store chat session in database"""
         try:
@@ -1002,128 +1018,135 @@ class EnterpriseIntegrationPlatform:
             await self.redis.setex(
                 f"session:{session_data['id']}",
                 3600 * 24,  # 24 hours
-                json.dumps(session_data, default=str)
+                json.dumps(session_data, default=str),
             )
-            
+
         except Exception as e:
             logger.error(f"Session storage error: {e}")
-            
+
     async def _get_session(self, session_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         """Get chat session data"""
         try:
             session_data = await self.redis.get(f"session:{session_id}")
             if session_data:
                 session = json.loads(session_data)
-                if session.get('user_id') == user_id:
+                if session.get("user_id") == user_id:
                     return session
             return None
-            
+
         except Exception as e:
             logger.error(f"Session retrieval error: {e}")
             return None
-            
+
     async def _store_message(self, message_data: Dict[str, Any]):
         """Store message in database"""
         try:
             # Store message
             await self.redis.lpush(
-                f"messages:{message_data['session_id']}",
-                json.dumps(message_data, default=str)
+                f"messages:{message_data['session_id']}", json.dumps(message_data, default=str)
             )
-            
+
             # Set TTL
             await self.redis.expire(f"messages:{message_data['session_id']}", 3600 * 24 * 7)
-            
+
         except Exception as e:
             logger.error(f"Message storage error: {e}")
-            
-    async def _process_ai_message(self, session_data: Dict[str, Any], content: str, context: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def _process_ai_message(
+        self, session_data: Dict[str, Any], content: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Process message with AI service"""
         try:
             # This would integrate with the actual AI service
             # For now, return mock response
-            
+
             response_content = f"I received your message: {content[:100]}..."
-            
+
             return {
-                'content': response_content,
-                'tokens': len(content.split()) + len(response_content.split()),
-                'cost': 0.002,
-                'response_time': 1.5,
-                'model': session_data['config']['model']
+                "content": response_content,
+                "tokens": len(content.split()) + len(response_content.split()),
+                "cost": 0.002,
+                "response_time": 1.5,
+                "model": session_data["config"]["model"],
             }
-            
+
         except Exception as e:
             logger.error(f"AI message processing error: {e}")
             return {
-                'content': "I'm sorry, I encountered an error processing your message.",
-                'tokens': 0,
-                'cost': 0.0,
-                'response_time': 0.0,
-                'model': 'error'
+                "content": "I'm sorry, I encountered an error processing your message.",
+                "tokens": 0,
+                "cost": 0.0,
+                "response_time": 0.0,
+                "model": "error",
             }
-            
-    async def _get_user_sessions(self, user_id: str, limit: int, offset: int) -> List[Dict[str, Any]]:
+
+    async def _get_user_sessions(
+        self, user_id: str, limit: int, offset: int
+    ) -> List[Dict[str, Any]]:
         """Get user's chat sessions"""
         try:
             # This would query the database for user sessions
             # For now, return empty list
             return []
-            
+
         except Exception as e:
             logger.error(f"User sessions retrieval error: {e}")
             return []
-            
-    async def _get_session_messages(self, session_id: str, user_id: str, limit: int, offset: int) -> List[Dict[str, Any]]:
+
+    async def _get_session_messages(
+        self, session_id: str, user_id: str, limit: int, offset: int
+    ) -> List[Dict[str, Any]]:
         """Get messages for a session"""
         try:
             # Verify session ownership
             session = await self._get_session(session_id, user_id)
             if not session:
                 return []
-                
+
             # Get messages
             messages = await self.redis.lrange(f"messages:{session_id}", offset, offset + limit - 1)
-            
+
             return [json.loads(msg) for msg in messages]
-            
+
         except Exception as e:
             logger.error(f"Session messages retrieval error: {e}")
             return []
-            
-    async def _generate_usage_analytics(self, user_id: str, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+
+    async def _generate_usage_analytics(
+        self, user_id: str, start_date: datetime, end_date: datetime
+    ) -> Dict[str, Any]:
         """Generate usage analytics for user"""
         try:
             # This would generate real analytics from database
             # For now, return mock data
-            
+
             return {
-                'total_requests': 1250,
-                'total_tokens': 45000,
-                'total_cost': 67.50,
-                'average_response_time': 1.8,
-                'success_rate': 0.995,
-                'breakdowns': {
-                    'by_model': [
-                        {'model': 'gpt-4', 'requests': 800, 'tokens': 30000, 'cost': 45.00},
-                        {'model': 'gpt-3.5-turbo', 'requests': 450, 'tokens': 15000, 'cost': 22.50}
+                "total_requests": 1250,
+                "total_tokens": 45000,
+                "total_cost": 67.50,
+                "average_response_time": 1.8,
+                "success_rate": 0.995,
+                "breakdowns": {
+                    "by_model": [
+                        {"model": "gpt-4", "requests": 800, "tokens": 30000, "cost": 45.00},
+                        {"model": "gpt-3.5-turbo", "requests": 450, "tokens": 15000, "cost": 22.50},
                     ],
-                    'by_day': [
-                        {'date': '2024-01-01', 'requests': 50, 'tokens': 1800, 'cost': 2.70},
-                        {'date': '2024-01-02', 'requests': 75, 'tokens': 2700, 'cost': 4.05}
-                    ]
-                }
+                    "by_day": [
+                        {"date": "2024-01-01", "requests": 50, "tokens": 1800, "cost": 2.70},
+                        {"date": "2024-01-02", "requests": 75, "tokens": 2700, "cost": 4.05},
+                    ],
+                },
             }
-            
+
         except Exception as e:
             logger.error(f"Analytics generation error: {e}")
             return {}
-            
+
     def generate_sdk_examples(self) -> Dict[str, str]:
         """Generate SDK examples for different languages"""
-        
+
         examples = {
-            'python': '''
+            "python": """
 # Python SDK Example
 import requests
 
@@ -1161,9 +1184,8 @@ api = ChatbotAPI("sk_your_api_key_here")
 session = api.create_session()
 message = api.send_message(session["id"], "Hello, world!")
 print(message["content"])
-            ''',
-            
-            'javascript': '''
+            """,
+            "javascript": """
 // JavaScript SDK Example
 class ChatbotAPI {
     constructor(apiKey, baseUrl = 'https://api.example.com') {
@@ -1203,9 +1225,8 @@ const api = new ChatbotAPI('sk_your_api_key_here');
 const session = await api.createSession();
 const message = await api.sendMessage(session.id, 'Hello, world!');
 console.log(message.content);
-            ''',
-            
-            'curl': '''
+            """,
+            "curl": """
 # cURL Examples
 
 # Create a chat session
@@ -1229,9 +1250,8 @@ curl -X POST https://api.example.com/api/v2/chat/sessions/SESSION_ID/messages \\
 # Get usage analytics
 curl -X GET "https://api.example.com/api/v2/analytics/usage?start_date=2024-01-01&end_date=2024-01-31" \\
   -H "Authorization: Bearer sk_your_api_key_here"
-            ''',
-            
-            'graphql': '''
+            """,
+            "graphql": """
 # GraphQL Examples
 
 # Query for chat sessions
@@ -1284,16 +1304,16 @@ mutation SendMessage {
     }
   }
 }
-            '''
+            """,
         }
-        
+
         return examples
-        
+
     async def create_saml_sso_config(self, user_id: str, config: Dict[str, Any]) -> str:
         """Create SAML SSO configuration"""
         try:
             config_id = str(uuid.uuid4())
-            
+
             # Store SAML configuration
             db = self.SessionLocal()
             try:
@@ -1301,26 +1321,26 @@ mutation SendMessage {
                     id=config_id,
                     user_id=user_id,
                     integration_type=IntegrationType.SAML_SSO.value,
-                    name=config.get('name', 'SAML SSO'),
-                    config=config
+                    name=config.get("name", "SAML SSO"),
+                    config=config,
                 )
                 db.add(saml_config)
                 db.commit()
-                
+
                 return config_id
-                
+
             finally:
                 db.close()
-                
+
         except Exception as e:
             logger.error(f"SAML SSO config creation error: {e}")
             raise
-            
+
     async def create_scim_provisioning(self, user_id: str, config: Dict[str, Any]) -> str:
         """Create SCIM user provisioning configuration"""
         try:
             config_id = str(uuid.uuid4())
-            
+
             # Store SCIM configuration
             db = self.SessionLocal()
             try:
@@ -1328,38 +1348,39 @@ mutation SendMessage {
                     id=config_id,
                     user_id=user_id,
                     integration_type=IntegrationType.SCIM.value,
-                    name=config.get('name', 'SCIM Provisioning'),
-                    config=config
+                    name=config.get("name", "SCIM Provisioning"),
+                    config=config,
                 )
                 db.add(scim_config)
                 db.commit()
-                
+
                 return config_id
-                
+
             finally:
                 db.close()
-                
+
         except Exception as e:
             logger.error(f"SCIM config creation error: {e}")
             raise
-            
+
     async def shutdown(self):
         """Shutdown the integration platform"""
         try:
             # Close Redis connection
             await self.redis.close()
-            
+
             logger.info("Enterprise Integration Platform shut down")
-            
+
         except Exception as e:
             logger.error(f"Shutdown error: {e}")
+
 
 # Example usage and configuration
 def create_integration_platform(config: Dict[str, Any]) -> EnterpriseIntegrationPlatform:
     """Create and configure the integration platform"""
-    
+
     platform = EnterpriseIntegrationPlatform(config)
-    
+
     # Add custom middleware, authentication, etc.
-    
+
     return platform

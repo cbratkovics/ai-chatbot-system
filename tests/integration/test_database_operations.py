@@ -58,7 +58,10 @@ class TestDatabaseOperations:
 
         async def create_chat(session, chat_id):
             chat = Chat(
-                id=f"chat_{chat_id}", user_id="user123", message=f"Message {chat_id}", created_at=datetime.utcnow()
+                id=f"chat_{chat_id}",
+                user_id="user123",
+                message=f"Message {chat_id}",
+                created_at=datetime.utcnow(),
             )
             session.add(chat)
             await session.commit()
@@ -73,11 +76,17 @@ class TestDatabaseOperations:
     @pytest.mark.asyncio
     async def test_database_query_optimization(self, mock_database):
         """Test database query optimization."""
-        from api.models import Chat, User
         from sqlalchemy import select
         from sqlalchemy.orm import selectinload
 
-        query = select(User).options(selectinload(User.chats)).where(User.tenant_id == "tenant123").limit(100)
+        from api.models import Chat, User
+
+        query = (
+            select(User)
+            .options(selectinload(User.chats))
+            .where(User.tenant_id == "tenant123")
+            .limit(100)
+        )
 
         mock_database.execute.return_value.scalars.return_value.all.return_value = []
 
@@ -113,9 +122,11 @@ class TestDatabaseOperations:
     @pytest.mark.asyncio
     async def test_database_indexing_performance(self, mock_database):
         """Test database indexing performance."""
-        from api.models import Chat
-        from sqlalchemy import select
         import time
+
+        from sqlalchemy import select
+
+        from api.models import Chat
 
         query_with_index = select(Chat).where(
             Chat.user_id == "user123", Chat.created_at >= datetime.utcnow() - timedelta(days=7)

@@ -1,19 +1,13 @@
 """Real-time WebSocket infrastructure for chat streaming."""
 
-from .manager import ConnectionManager, WebSocketConnection
 # Handler import temporarily disabled due to circular import issue
 # from .handlers import WebSocketHandler
-from .events import (
-    WebSocketEvent,
-    ConnectionEvent,
-    MessageEvent,
-    ErrorEvent,
-    HeartbeatEvent
-)
+from .events import ConnectionEvent, ErrorEvent, HeartbeatEvent, MessageEvent, WebSocketEvent
+from .manager import ConnectionManager, WebSocketConnection
 
 __all__ = [
     "ConnectionManager",
-    "WebSocketConnection", 
+    "WebSocketConnection",
     # "WebSocketHandler",
     "WebSocketEvent",
     "ConnectionEvent",

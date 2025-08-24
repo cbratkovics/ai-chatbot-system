@@ -1,7 +1,7 @@
 """Database session management."""
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from ..app.config import settings
 
@@ -12,7 +12,7 @@ engine = create_engine(
     pool_size=20,
     max_overflow=40,
     pool_pre_ping=True,
-    pool_recycle=3600
+    pool_recycle=3600,
 )
 
 # Create session factory

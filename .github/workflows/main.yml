@@ -2,34 +2,65 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+  POETRY_VERSION: "1.7.1"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pypoetry
+          .venv
+        key: poetry-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          poetry-${{ runner.os }}-
     
     - name: Install dependencies
       run: |
-        pip install -r config/requirements/base.txt
-        pip install -r config/requirements/dev.txt
-    
-    - name: Run tests
-      run: pytest tests/ -v --cov=api
+        poetry install --with dev
     
     - name: Run linting
       run: |
-        black --check api/
-        flake8 api/
+        poetry run black --check api/
+        poetry run isort --check-only api/
+        poetry run flake8 api/
+        poetry run mypy api/
+    
+    - name: Run security checks
+      run: |
+        poetry run bandit -r api/
+        poetry run safety check
+    
+    - name: Run tests with coverage
+      run: |
+        poetry run pytest tests/ -v --cov=api --cov-report=xml --cov-report=term
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
     
   build:
     needs: test
@@ -37,12 +68,40 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     
     - name: Build Docker image
-      run: docker build -t chatbot-system:${{ github.sha }} .
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: chatbot-platform:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     
-    - name: Run security scan
+  dependency-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install Poetry
       run: |
-        pip install safety
-        safety check
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+    - name: Check for outdated dependencies
+      run: poetry show --outdated
+    
+    - name: Check for security vulnerabilities
+      run: |
+        poetry export -f requirements.txt | poetry run safety check --stdin

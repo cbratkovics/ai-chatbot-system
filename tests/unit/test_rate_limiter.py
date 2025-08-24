@@ -69,7 +69,9 @@ class TestRateLimiter:
         """Test sliding window rate limiter."""
         from api.core.tenancy.rate_limiter import SlidingWindowRateLimiter
 
-        limiter = SlidingWindowRateLimiter(redis_client=mock_redis, window_seconds=60, max_requests=100)
+        limiter = SlidingWindowRateLimiter(
+            redis_client=mock_redis, window_seconds=60, max_requests=100
+        )
 
         mock_redis.zcount.return_value = 50
 
@@ -83,7 +85,9 @@ class TestRateLimiter:
         """Test distributed rate limiting across multiple instances."""
         from api.core.tenancy.rate_limiter import DistributedRateLimiter
 
-        limiter = DistributedRateLimiter(redis_client=mock_redis, max_requests=100, window_seconds=60)
+        limiter = DistributedRateLimiter(
+            redis_client=mock_redis, max_requests=100, window_seconds=60
+        )
 
         mock_redis.eval.return_value = 1
 
@@ -107,7 +111,9 @@ class TestRateLimiter:
         """Test burst traffic allowance."""
         from api.core.tenancy.rate_limiter import TokenBucketRateLimiter
 
-        limiter = TokenBucketRateLimiter(redis_client=mock_redis, capacity=100, refill_rate=10, burst_size=20)
+        limiter = TokenBucketRateLimiter(
+            redis_client=mock_redis, capacity=100, refill_rate=10, burst_size=20
+        )
 
         mock_redis.hget.return_value = "100"
 
@@ -122,7 +128,10 @@ class TestRateLimiter:
         limiter = RateLimiter(redis_client=mock_redis)
 
         headers = await limiter.get_rate_limit_headers(
-            key="user123", limit=100, remaining=75, reset_time=datetime.utcnow() + timedelta(seconds=30)
+            key="user123",
+            limit=100,
+            remaining=75,
+            reset_time=datetime.utcnow() + timedelta(seconds=30),
         )
 
         assert headers["X-RateLimit-Limit"] == "100"

@@ -20,11 +20,15 @@ class TestFailoverScenarios:
         async with AsyncClient(base_url="http://localhost:8000") as client:
             headers = {"Authorization": "Bearer test-token"}
 
-            with patch("api.core.models.openai_provider.OpenAIProvider.chat_completion") as mock_openai:
+            with patch(
+                "api.core.models.openai_provider.OpenAIProvider.chat_completion"
+            ) as mock_openai:
                 mock_openai.side_effect = ConnectionError("OpenAI API unavailable")
 
                 response = await client.post(
-                    "/api/v1/chat/completions", json={"message": "Test message", "model": "gpt-4"}, headers=headers
+                    "/api/v1/chat/completions",
+                    json={"message": "Test message", "model": "gpt-4"},
+                    headers=headers,
                 )
 
                 assert response.status_code == 200
@@ -49,11 +53,15 @@ class TestFailoverScenarios:
                 assert data["read_from_replica"] is True
 
             response = await client.post(
-                "/api/v1/chat/completions", json={"message": "Write operation test", "model": "gpt-4"}, headers=headers
+                "/api/v1/chat/completions",
+                json={"message": "Write operation test", "model": "gpt-4"},
+                headers=headers,
             )
 
             if response.status_code == 503:
-                assert response.json()["error"] == "Primary database unavailable for write operations"
+                assert (
+                    response.json()["error"] == "Primary database unavailable for write operations"
+                )
 
     @pytest.mark.asyncio
     async def test_cache_failover(self):
@@ -85,14 +93,18 @@ class TestFailoverScenarios:
             circuit_opened = False
 
             for i in range(20):
-                with patch("api.core.models.openai_provider.OpenAIProvider.chat_completion") as mock:
+                with patch(
+                    "api.core.models.openai_provider.OpenAIProvider.chat_completion"
+                ) as mock:
                     if i < 5:
                         mock.side_effect = ConnectionError("Service unavailable")
                     else:
                         mock.return_value = {"response": "success"}
 
                     response = await client.post(
-                        "/api/v1/chat/completions", json={"message": f"Request {i}", "model": "gpt-4"}, headers=headers
+                        "/api/v1/chat/completions",
+                        json={"message": f"Request {i}", "model": "gpt-4"},
+                        headers=headers,
                     )
 
                     if response.status_code == 503:
@@ -141,7 +153,11 @@ class TestFailoverScenarios:
                     json={"message": f"Load test {request_id}", "model": "gpt-3.5-turbo"},
                     headers=headers,
                 )
-                return {"id": request_id, "status": response.status_code, "shed": response.status_code == 503}
+                return {
+                    "id": request_id,
+                    "status": response.status_code,
+                    "shed": response.status_code == 503,
+                }
 
             tasks = [make_request(i) for i in range(1000)]
             results = await asyncio.gather(*tasks)
@@ -177,7 +193,9 @@ class TestFailoverScenarios:
 
                 start_time = time.time()
                 response = await client.post(
-                    "/api/v1/chat/completions", json={"message": "Retry test", "model": "gpt-4"}, headers=headers
+                    "/api/v1/chat/completions",
+                    json={"message": "Retry test", "model": "gpt-4"},
+                    headers=headers,
                 )
                 total_time = time.time() - start_time
 
@@ -236,7 +254,9 @@ class TestFailoverScenarios:
                 if response.status_code == 200:
                     messages_sent.append(message)
 
-            history_response = await client.get(f"/api/v1/chat/sessions/{session_id}/history", headers=headers)
+            history_response = await client.get(
+                f"/api/v1/chat/sessions/{session_id}/history", headers=headers
+            )
             assert history_response.status_code == 200
             history = history_response.json()
 
@@ -285,10 +305,14 @@ class TestFailoverScenarios:
         async with AsyncClient(base_url="http://localhost:8000") as client:
             headers = {"Authorization": "Bearer test-token"}
 
-            with patch("api.core.models.openai_provider.OpenAIProvider.chat_completion") as mock_openai:
+            with patch(
+                "api.core.models.openai_provider.OpenAIProvider.chat_completion"
+            ) as mock_openai:
                 mock_openai.side_effect = ConnectionError("OpenAI down")
 
-                with patch("api.core.models.anthropic_provider.AnthropicProvider.chat_completion") as mock_anthropic:
+                with patch(
+                    "api.core.models.anthropic_provider.AnthropicProvider.chat_completion"
+                ) as mock_anthropic:
                     mock_anthropic.side_effect = ConnectionError("Anthropic down")
 
                     response = await client.post(
