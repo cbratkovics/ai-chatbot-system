@@ -1,12 +1,21 @@
-# Multi-Tenant AI Chat Platform
+# Multi-Tenant Chatbot Platform
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)](https://fastapi.tiangolo.com)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://docker.com)
-[![Demo](https://img.shields.io/badge/Demo-Available-success)](../../tree/demo)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./tests)
 
-[**Full Docs**](docs/README.md) | [**Live Demo**](https://demo.example.com)
+## Overview
+Enterprise-grade SaaS platform implementing production-ready conversational AI with multi-tenant isolation, sophisticated orchestration, and advanced observability. The architecture emphasizes reliability, scalability, and cost efficiency while maintaining enterprise security standards.
+
+### Key Features
+
+- **Multi-Provider Architecture**: Seamless failover between providers
+- **Real-Time Streaming**: WebSocket-based streaming responses
+- **Semantic Caching**: 30% cost reduction through intelligent caching
+- **Enterprise Ready**: Multi-tenancy, rate limiting, audit logging
+- **Observable**: Distributed tracing, metrics, and monitoring
+- **Scalable**: Handles 100+ concurrent users, <200ms P95 latency
 
 ## Platform Metrics
 - **99.5% uptime** under production load
@@ -14,10 +23,6 @@
 - **30% API cost reduction** via semantic caching
 - **100+ concurrent WebSocket connections**
 - **Multi-model orchestration** (Provider A/Provider B/Llama)
-
-## Overview
-
-Enterprise-grade SaaS platform implementing production-ready conversational AI with multi-tenant isolation, sophisticated orchestration, and advanced observability. The architecture emphasizes reliability, scalability, and cost efficiency while maintaining enterprise security standards.
 
 ## Enterprise Features
 
