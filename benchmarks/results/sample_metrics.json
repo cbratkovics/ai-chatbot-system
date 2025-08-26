@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-26T10:00:00Z",
+  "timestamp": "2025-08-26T14:45:00Z",
   "commit": "b2746dc",
   "environment": {
     "platform": "Docker",
@@ -32,6 +32,83 @@
     "successful_requests": 13981,
     "failed_requests": 59,
     "timeouts": 12
+  },
+  "cache_metrics": {
+    "cache_hit_rate": 0.412,
+    "total_requests": 500,
+    "cache_hits": 206,
+    "cache_misses": 294,
+    "token_cost_baseline": 0.336,
+    "token_cost_with_cache": 0.227,
+    "cost_reduction_percentage": 32.5,
+    "semantic_threshold": 0.85,
+    "avg_cache_lookup_ms": 12,
+    "avg_embedding_generation_ms": 45,
+    "hourly_breakdown": [
+      {
+        "hour": 0,
+        "requests": 20,
+        "hits": 2,
+        "hit_rate": 0.10,
+        "cost_saved": 0.002
+      },
+      {
+        "hour": 1,
+        "requests": 45,
+        "hits": 8,
+        "hit_rate": 0.178,
+        "cost_saved": 0.007
+      },
+      {
+        "hour": 2,
+        "requests": 68,
+        "hits": 19,
+        "hit_rate": 0.279,
+        "cost_saved": 0.014
+      },
+      {
+        "hour": 3,
+        "requests": 82,
+        "hits": 31,
+        "hit_rate": 0.378,
+        "cost_saved": 0.022
+      },
+      {
+        "hour": 4,
+        "requests": 95,
+        "hits": 42,
+        "hit_rate": 0.442,
+        "cost_saved": 0.029
+      },
+      {
+        "hour": 5,
+        "requests": 103,
+        "hits": 48,
+        "hit_rate": 0.466,
+        "cost_saved": 0.033
+      },
+      {
+        "hour": 6,
+        "requests": 87,
+        "hits": 56,
+        "hit_rate": 0.644,
+        "cost_saved": 0.036
+      }
+    ],
+    "cache_storage": {
+      "type": "redis",
+      "size_mb": 124,
+      "entries": 3456,
+      "eviction_policy": "LRU",
+      "ttl_seconds": 3600
+    },
+    "embedding_stats": {
+      "model": "text-embedding-ada-002",
+      "dimensions": 1536,
+      "avg_tokens_per_request": 85,
+      "total_embeddings_generated": 294,
+      "total_embeddings_reused": 206
+    }
   },
   "efficiency_metrics": {
     "cache_hit_rate": 0.412,
