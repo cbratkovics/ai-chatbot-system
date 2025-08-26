@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     JWT_ISSUER: str = Field(default="ai-chatbot-system")
     JWT_AUDIENCE: str = Field(default="ai-chatbot-api")
     ALLOWED_ORIGINS: List[str] = Field(default=["*"])
-    
+
     # CORS Configuration
     CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8080")
     CORS_ALLOW_CREDENTIALS: bool = Field(default=True)
@@ -41,7 +41,9 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: str = Field(default="*")
 
     # Database
-    DATABASE_URL: str = Field(default="postgresql://chatbot_user:secure_password@localhost:5432/chatbot_db")
+    DATABASE_URL: str = Field(
+        default="postgresql://chatbot_user:secure_password@localhost:5432/chatbot_db"
+    )
     DATABASE_URL_TEST: str = Field(default="")
     DATABASE_POOL_SIZE: int = Field(default=20)
     DATABASE_MAX_OVERFLOW: int = Field(default=40)
@@ -65,7 +67,7 @@ class Settings(BaseSettings):
     PROVIDER_A_BASE_URL: str = Field(default="")
     PROVIDER_B_API_KEY: str = Field(default="")
     PROVIDER_B_BASE_URL: str = Field(default="")
-    
+
     # OpenAI
     OPENAI_API_KEY: str = Field(default="")
     OPENAI_API_BASE: str = Field(default="https://api.openai.com/v1")
@@ -73,7 +75,7 @@ class Settings(BaseSettings):
     OPENAI_DEFAULT_MODEL: str = Field(default="gpt-4-turbo-preview")
     OPENAI_TIMEOUT_SECONDS: int = Field(default=30)
     OPENAI_MAX_RETRIES: int = Field(default=3)
-    
+
     # Anthropic
     ANTHROPIC_API_KEY: str = Field(default="")
     ANTHROPIC_API_BASE: str = Field(default="https://api.anthropic.com")
@@ -81,14 +83,14 @@ class Settings(BaseSettings):
     ANTHROPIC_DEFAULT_MODEL: str = Field(default="claude-3-opus-20240229")
     ANTHROPIC_TIMEOUT_SECONDS: int = Field(default=30)
     ANTHROPIC_MAX_RETRIES: int = Field(default=3)
-    
+
     # Llama
     LLAMA_API_ENDPOINT: str = Field(default="http://localhost:11434")
     LLAMA_API_KEY: str = Field(default="")
     LLAMA_DEFAULT_MODEL: str = Field(default="llama-3-70b")
     LLAMA_TIMEOUT_SECONDS: int = Field(default=60)
     LLAMA_MAX_RETRIES: int = Field(default=2)
-    
+
     # Model Router
     DEFAULT_MODEL_PROVIDER: str = Field(default="openai")
     MODEL_FALLBACK_ENABLED: bool = Field(default=True)
@@ -110,11 +112,11 @@ class Settings(BaseSettings):
     JAEGER_SERVICE_NAME: str = Field(default="ai-chatbot-api")
     JAEGER_SAMPLER_TYPE: str = Field(default="probabilistic")
     JAEGER_SAMPLER_PARAM: float = Field(default=0.1)
-    
+
     PROMETHEUS_ENABLED: bool = Field(default=False)
     PROMETHEUS_PORT: int = Field(default=9090)
     METRICS_PATH: str = Field(default="/metrics")
-    
+
     GRAFANA_ENABLED: bool = Field(default=False)
     GRAFANA_PORT: int = Field(default=3000)
     GRAFANA_ADMIN_PASSWORD: str = Field(default="admin")
@@ -289,7 +291,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"  # Allow extra fields from .env that aren't defined here
+        extra="ignore",  # Allow extra fields from .env that aren't defined here
     )
 
 

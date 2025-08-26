@@ -6,14 +6,19 @@ from api.v1.routes import health, websocket
 chat_router = APIRouter()
 tenants_router = APIRouter()
 
+
 # Create module-like objects with router attribute
 class ChatModule:
     """Placeholder for chat module."""
+
     router = chat_router
+
 
 class TenantsModule:
     """Placeholder for tenants module."""
+
     router = tenants_router
+
 
 chat = ChatModule()
 tenants = TenantsModule()

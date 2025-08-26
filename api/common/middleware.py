@@ -7,7 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """Authentication middleware."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process requests for authentication."""
         # Placeholder implementation
@@ -17,7 +17,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     """Global error handling middleware."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Handle errors globally."""
         try:
@@ -30,7 +30,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting middleware."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Apply rate limiting."""
         # Placeholder implementation
@@ -40,7 +40,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 class TracingMiddleware(BaseHTTPMiddleware):
     """Distributed tracing middleware."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Add tracing to requests."""
         # Placeholder implementation
