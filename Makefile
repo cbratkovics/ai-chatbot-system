@@ -42,3 +42,27 @@ migrate:  ## Run database migrations
 
 serve:  ## Start development server
 	poetry run python -m api.main
+
+# Quick Demo Commands
+.PHONY: demo demo-up demo-test demo-benchmark demo-clean
+
+demo: demo-up demo-test demo-benchmark  ## Run complete demo (build, test, benchmark)
+	@echo "Demo complete. See benchmarks/results/"
+
+demo-up:  ## Start services for demo
+	docker compose up -d --build
+	@echo "Waiting for services..."
+	@sleep 5
+	@curl -fsS http://localhost:8000/health >/dev/null && echo "Health: OK" || echo "Health: FAIL"
+
+demo-test:  ## Run provider failover tests
+	docker compose exec backend pytest -q --maxfail=1 --disable-warnings || true
+	docker compose exec backend pytest -q tests/test_provider_failover.py -v --tb=short --junitxml=benchmarks/results/junit_$${USER}.xml || true
+
+demo-benchmark:  ## Run k6 load tests
+	docker run --rm --network=host -v $(PWD)/benchmarks:/scripts grafana/k6 run /scripts/load/rest_api_load.js
+	docker run --rm --network=host -v $(PWD)/benchmarks:/scripts grafana/k6 run /scripts/load/websocket_concurrency.js
+	@echo "Results saved to benchmarks/results/"
+
+demo-clean:  ## Clean up demo resources
+	docker compose down -v
