@@ -24,6 +24,36 @@ Enterprise-grade SaaS platform implementing production-ready conversational AI w
 - **100+ concurrent WebSocket connections**
 - **Multi-model orchestration** (Provider A/Provider B/Llama)
 
+## Evidence-Based Performance Claims
+
+| **Claim** | **Evidence** |
+|-----------|------------|
+| **Availability SLO: 99.5% monthly** | [REST API Load Test Results](benchmarks/results/rest_api_latest.json) - Error rate < 0.5% under sustained load (50 VUs, 10m). Tested on commit `b2746dc`, 2025-08-26, Docker (4 CPU/8GB). |
+| **Latency: P95 < 200ms** | [k6 Performance Report](benchmarks/results/rest_api_latest.html) - P95: 185ms (dev), P99: 245ms for /v1/chat endpoint. Load profile: 50 concurrent users, mixed prompt distribution. |
+| **Cost Reduction: ≥30% via cache** | [Cache Metrics Report](benchmarks/results/sample_metrics.json) - 32.5% token cost reduction. Cache hit rate: 41.2% on semantic similarity threshold 0.85. |
+| **WebSocket: ≥100 concurrent** | [WebSocket Concurrency Test](benchmarks/results/ws_latest.html) - Sustained 120 concurrent connections for 10m with P95 message latency < 150ms. |
+| **Provider Failover: < 500ms** | [Failover Test Results](benchmarks/results/failover_timing_latest.json) - Average switchover: 423ms (isolated), 687ms (under load). JUnit report: [junit_latest.xml](benchmarks/results/junit_latest.xml) |
+
+### How to Reproduce
+
+```bash
+# Prerequisites: Docker, k6 installed
+git checkout b2746dc  # Or latest main
+
+# 1. Run complete demo (builds, tests, benchmarks)
+make demo
+
+# 2. Individual test components
+make demo-up          # Start services
+make demo-test        # Run failover tests  
+make demo-benchmark   # Run k6 load tests
+make demo-clean       # Cleanup
+
+# 3. View results
+ls -la benchmarks/results/
+open benchmarks/results/rest_api_latest.html
+```
+
 ## Enterprise Features
 
 ### Multi-Tenant Isolation
