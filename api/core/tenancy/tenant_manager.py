@@ -34,7 +34,7 @@ class TenantManager:
             Created tenant data
         """
         try:
-            from api.models import Tenant
+            from api.database.models import Tenant
 
             tenant = Tenant(
                 id=tenant_config.get("tenant_id"),
@@ -81,7 +81,7 @@ class TenantManager:
         try:
             from sqlalchemy import select
 
-            from api.models import Tenant
+            from api.database.models import Tenant
 
             result = await self.db.execute(select(Tenant).where(Tenant.id == tenant_id))
             tenant = result.scalar_one_or_none()
@@ -118,7 +118,7 @@ class TenantManager:
         try:
             from sqlalchemy import update
 
-            from api.models import Tenant
+            from api.database.models import Tenant
 
             await self.db.execute(update(Tenant).where(Tenant.id == tenant_id).values(**updates))
             await self.db.commit()
@@ -145,7 +145,7 @@ class TenantManager:
         try:
             from sqlalchemy import delete
 
-            from api.models import Tenant
+            from api.database.models import Tenant
 
             await self.db.execute(delete(Tenant).where(Tenant.id == tenant_id))
             await self.db.commit()

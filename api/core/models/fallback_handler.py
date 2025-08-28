@@ -71,7 +71,7 @@ class FallbackHandler:
 
         try:
             response = await self.secondary.chat_completion(request)
-            response["fallback"] = True
+            # response["fallback"] = True
             return response
         except Exception as e:
             logger.error(f"Secondary provider also failed: {e}")
