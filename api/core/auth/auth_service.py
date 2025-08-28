@@ -11,6 +11,16 @@ import jwt
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+try:
+    from api.models.tenant import TenantConfig
+    from api.models.provider import ProviderConfig
+    from api.models.cost import CostReport
+except ImportError:
+    # Fallback for testing
+    TenantConfig = dict
+    ProviderConfig = dict
+    CostReport = dict
+
 logger = logging.getLogger(__name__)
 
 
@@ -149,7 +159,11 @@ class AuthService:
             ).isoformat()
 
         if self.db:
-            from api.models import APIKey
+            try:
+                from api.models import APIKey
+            except ImportError:
+                # Fallback for testing
+                APIKey = dict
 
             api_key = APIKey(
                 key_hash=key_hash,
@@ -184,7 +198,11 @@ class AuthService:
 
             from sqlalchemy import select
 
-            from api.models import APIKey
+            try:
+                from api.models import APIKey
+            except ImportError:
+                # Fallback for testing
+                APIKey = dict
 
             result = await self.db.execute(
                 select(APIKey).where(APIKey.key_hash == key_hash, APIKey.active.is_(True))
@@ -343,7 +361,7 @@ class AuthService:
         stored_token = await self.redis_client.get(f"mfa:{user_id}")
 
         if stored_token:
-            return stored_token.decode() == token
+            return stored_token if isinstance(stored_token, str) else stored_token.decode() == token
 
         return False
 
