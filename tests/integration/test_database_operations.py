@@ -1,13 +1,10 @@
 """Integration tests for database operations."""
 
 import asyncio
-import json
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
 
 class TestDatabaseOperations:
@@ -79,7 +76,7 @@ class TestDatabaseOperations:
         from sqlalchemy import select
         from sqlalchemy.orm import selectinload
 
-        from api.models import Chat, User
+        from api.models import User
 
         query = (
             select(User)
@@ -141,7 +138,6 @@ class TestDatabaseOperations:
     @pytest.mark.asyncio
     async def test_database_partitioning(self, mock_database):
         """Test database table partitioning."""
-        from api.models import ChatPartitioned
 
         partitions = ["chats_2024_01", "chats_2024_02", "chats_2024_03"]
 

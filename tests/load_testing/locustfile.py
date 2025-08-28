@@ -1,6 +1,5 @@
 """Load testing configuration for AI Chatbot System"""
 
-import json
 import random
 
 from locust import HttpUser, between, task

@@ -1,10 +1,9 @@
 """WebSocket event system for structured communication."""
 
-import json
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -44,12 +43,12 @@ class WebSocketEvent(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     type: EventType
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    data: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
 
     # Connection context
-    connection_id: Optional[str] = None
-    tenant_id: Optional[UUID] = None
-    user_id: Optional[str] = None
+    connection_id: str | None = None
+    tenant_id: UUID | None = None
+    user_id: str | None = None
 
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
@@ -63,7 +62,7 @@ class WebSocketEvent(BaseModel):
         """Deserialize event from JSON string."""
         return cls.model_validate_json(json_str)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert event to dictionary."""
         return self.model_dump()
 
@@ -82,8 +81,8 @@ class MessageEvent(WebSocketEvent):
         self,
         content: str,
         role: str = "user",
-        conversation_id: Optional[UUID] = None,
-        message_id: Optional[UUID] = None,
+        conversation_id: UUID | None = None,
+        message_id: UUID | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -107,8 +106,8 @@ class ResponseEvent(WebSocketEvent):
         model: str,
         latency_ms: float,
         cached: bool = False,
-        conversation_id: Optional[UUID] = None,
-        message_id: Optional[UUID] = None,
+        conversation_id: UUID | None = None,
+        message_id: UUID | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -132,9 +131,9 @@ class StreamChunkEvent(WebSocketEvent):
         self,
         delta: str,
         chunk_index: int,
-        conversation_id: Optional[UUID] = None,
-        message_id: Optional[UUID] = None,
-        finish_reason: Optional[str] = None,
+        conversation_id: UUID | None = None,
+        message_id: UUID | None = None,
+        finish_reason: str | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -156,8 +155,8 @@ class StreamStartEvent(WebSocketEvent):
     def __init__(
         self,
         model: str,
-        conversation_id: Optional[UUID] = None,
-        message_id: Optional[UUID] = None,
+        conversation_id: UUID | None = None,
+        message_id: UUID | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -179,8 +178,8 @@ class StreamEndEvent(WebSocketEvent):
         total_tokens: int,
         total_cost: float,
         latency_ms: float,
-        conversation_id: Optional[UUID] = None,
-        message_id: Optional[UUID] = None,
+        conversation_id: UUID | None = None,
+        message_id: UUID | None = None,
         **kwargs,
     ):
         super().__init__(
@@ -200,7 +199,7 @@ class ErrorEvent(WebSocketEvent):
     """Error events."""
 
     def __init__(
-        self, error_message: str, error_code: Optional[str] = None, retryable: bool = True, **kwargs
+        self, error_message: str, error_code: str | None = None, retryable: bool = True, **kwargs
     ):
         super().__init__(
             type=EventType.CHAT_ERROR,
@@ -216,7 +215,7 @@ class ErrorEvent(WebSocketEvent):
 class HeartbeatEvent(WebSocketEvent):
     """Heartbeat/keepalive events."""
 
-    def __init__(self, server_time: Optional[float] = None, **kwargs):
+    def __init__(self, server_time: float | None = None, **kwargs):
         super().__init__(
             type=EventType.HEARTBEAT,
             data={"server_time": server_time or time.time(), "message": "pong", **kwargs},
@@ -285,7 +284,7 @@ class RateLimitWarningEvent(WebSocketEvent):
 class TypingIndicatorEvent(WebSocketEvent):
     """Typing indicator events."""
 
-    def __init__(self, is_typing: bool, conversation_id: Optional[UUID] = None, **kwargs):
+    def __init__(self, is_typing: bool, conversation_id: UUID | None = None, **kwargs):
         super().__init__(
             type=EventType.TYPING_INDICATOR,
             data={

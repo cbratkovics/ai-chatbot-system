@@ -2,7 +2,6 @@
 
 import logging
 import sys
-from typing import Any, Dict
 
 import structlog
 from pythonjsonlogger import jsonlogger

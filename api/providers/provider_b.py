@@ -3,12 +3,10 @@
 import asyncio
 import json
 import logging
-import time
-from typing import AsyncIterator, Dict, List
+from collections.abc import AsyncIterator
 from uuid import uuid4
 
 import aiohttp
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from .base import (
     AuthenticationError,
@@ -105,7 +103,7 @@ class ProviderB(BaseProvider):
         """Map internal model names to provider-specific names."""
         return self.model_mappings.get(model, model)
 
-    def _convert_messages(self, messages: List[Message]) -> Dict:
+    def _convert_messages(self, messages: list[Message]) -> dict:
         """Convert internal message format to Provider B format."""
         system_messages = []
         conversation_messages = []
@@ -244,15 +242,15 @@ class ProviderB(BaseProvider):
                 error_code="client_error",
                 retryable=True,
                 provider_name=self.name,
-            )
+            ) from e
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise ProviderError(
                 f"Request timeout after {self.config.timeout}s",
                 error_code="timeout",
                 retryable=True,
                 provider_name=self.name,
-            )
+            ) from None
 
         except json.JSONDecodeError as e:
             raise ProviderError(
@@ -260,7 +258,7 @@ class ProviderB(BaseProvider):
                 error_code="invalid_response",
                 retryable=True,
                 provider_name=self.name,
-            )
+            ) from e
 
     async def _make_stream_request(self, request: CompletionRequest) -> AsyncIterator[StreamChunk]:
         """Make streaming completion request to Provider B."""
@@ -345,15 +343,15 @@ class ProviderB(BaseProvider):
                 error_code="streaming_error",
                 retryable=True,
                 provider_name=self.name,
-            )
+            ) from e
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise ProviderError(
                 f"Streaming timeout after {self.config.timeout}s",
                 error_code="streaming_timeout",
                 retryable=True,
                 provider_name=self.name,
-            )
+            ) from None
 
     async def __aenter__(self):
         """Async context manager entry."""

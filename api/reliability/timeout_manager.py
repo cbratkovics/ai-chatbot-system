@@ -3,16 +3,17 @@
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 # Context variable for deadline propagation
-deadline_context: ContextVar[Optional[float]] = ContextVar("deadline", default=None)
+deadline_context: ContextVar[float | None] = ContextVar("deadline", default=None)
 
 
 @dataclass
@@ -33,31 +34,31 @@ class TimeoutEvent:
     timestamp: datetime
     operation: str
     timeout_ms: float
-    actual_duration_ms: Optional[float]
+    actual_duration_ms: float | None
     timed_out: bool
-    error: Optional[str]
+    error: str | None
 
 
 class TimeoutManager:
     """Manages timeouts with cascading and deadline propagation."""
 
-    def __init__(self, config: Optional[TimeoutConfig] = None):
+    def __init__(self, config: TimeoutConfig | None = None):
         """Initialize timeout manager.
 
         Args:
             config: Timeout configuration
         """
         self.config = config or TimeoutConfig()
-        self.timeout_events: List[TimeoutEvent] = []
-        self.operation_timeouts: Dict[str, float] = {}
+        self.timeout_events: list[TimeoutEvent] = []
+        self.operation_timeouts: dict[str, float] = {}
 
     async def execute_with_timeout(
         self,
         func: Callable,
-        timeout_ms: Optional[float] = None,
+        *args,
+        timeout_ms: float | None = None,
         operation: str = "unknown",
         propagate_deadline: bool = True,
-        *args,
         **kwargs,
     ) -> Any:
         """Execute function with timeout.
@@ -105,7 +106,7 @@ class TimeoutManager:
 
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Record timeout
             duration = (time.time() - start_time) * 1000
             self._record_event(
@@ -118,7 +119,7 @@ class TimeoutManager:
 
             logger.error(f"Operation '{operation}' timed out after {effective_timeout}ms")
 
-            raise TimeoutException(f"Operation '{operation}' timed out after {effective_timeout}ms")
+            raise TimeoutException(f"Operation '{operation}' timed out after {effective_timeout}ms") from None
 
         finally:
             # Clear deadline context
@@ -126,7 +127,7 @@ class TimeoutManager:
                 deadline_context.set(None)
 
     def _calculate_effective_timeout(
-        self, requested_timeout: Optional[float], operation: str, propagate_deadline: bool
+        self, requested_timeout: float | None, operation: str, propagate_deadline: bool
     ) -> float:
         """Calculate effective timeout considering all factors.
 
@@ -191,9 +192,9 @@ class TimeoutManager:
         self,
         operation: str,
         timeout_ms: float,
-        actual_duration_ms: Optional[float],
+        actual_duration_ms: float | None,
         timed_out: bool,
-        error: Optional[str] = None,
+        error: str | None = None,
     ):
         """Record timeout event.
 
@@ -235,7 +236,7 @@ class TimeoutManager:
                 operation
             ] + alpha * duration_ms
 
-    def get_remaining_time(self) -> Optional[float]:
+    def get_remaining_time(self) -> float | None:
         """Get remaining time from propagated deadline.
 
         Returns:
@@ -264,7 +265,7 @@ class TimeoutManager:
 
         return self.config.default_timeout_ms
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get timeout statistics.
 
         Returns:
@@ -293,7 +294,7 @@ class TimeoutManager:
                 operation_stats[event.operation]["durations"].append(event.actual_duration_ms)
 
         # Calculate per-operation metrics
-        for op, stats in operation_stats.items():
+        for _op, stats in operation_stats.items():
             if stats["durations"]:
                 stats["avg_duration_ms"] = sum(stats["durations"]) / len(stats["durations"])
                 stats["max_duration_ms"] = max(stats["durations"])
@@ -325,7 +326,7 @@ class CascadingTimeout:
         self,
         timeout_ms: float,
         operation: str = "cascading_operation",
-        manager: Optional[TimeoutManager] = None,
+        manager: TimeoutManager | None = None,
     ):
         """Initialize cascading timeout.
 
@@ -416,12 +417,14 @@ def timeout(
     def decorator(func):
         async def wrapper(*args, **kwargs):
             manager = TimeoutManager()
+            # Remove propagate_deadline from kwargs if present to avoid duplicate
+            propagate = kwargs.pop('propagate_deadline', propagate_deadline)
             return await manager.execute_with_timeout(
                 func,
+                *args,
                 timeout_ms=timeout_ms,
                 operation=operation,
-                propagate_deadline=propagate_deadline,
-                *args,
+                propagate_deadline=propagate,
                 **kwargs,
             )
 

@@ -4,15 +4,14 @@ Django-style management script for database operations and admin tasks.
 Provides a unified interface for common development and deployment tasks.
 """
 
-import click
 import asyncio
-import subprocess
-import sys
-import os
-from pathlib import Path
-from datetime import datetime
 import json
 import logging
+import subprocess
+import sys
+from pathlib import Path
+
+import click
 
 # Configure logging
 logging.basicConfig(
@@ -298,7 +297,7 @@ def status():
             click.echo(click.style("API: Healthy", fg='green'))
         else:
             click.echo(click.style(f"API: Unhealthy (status: {response.status_code})", fg='yellow'))
-    except:
+    except (requests.RequestException, ConnectionError, TimeoutError):
         click.echo(click.style("API: Not responding", fg='red'))
 
 

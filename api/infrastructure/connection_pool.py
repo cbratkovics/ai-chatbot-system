@@ -6,10 +6,11 @@ Provides resilient connection management with automatic retries and circuit brea
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 import aiohttp
 import aioredis
@@ -129,7 +130,7 @@ class ConnectionPool(Generic[T]):
         self,
         factory: Callable[[], T],
         config: PoolConfig,
-        health_check: Optional[Callable[[T], bool]] = None,
+        health_check: Callable[[T], bool] | None = None,
     ):
         self.factory = factory
         self.config = config
@@ -184,7 +185,7 @@ class ConnectionPool(Generic[T]):
                         conn = await self._create_connection()
                         self.circuit_breaker.record_success()
                         return conn
-                    except Exception as e:
+                    except Exception:
                         self.circuit_breaker.record_failure()
                         raise
 
@@ -194,8 +195,8 @@ class ConnectionPool(Generic[T]):
                     self.pool.get(), timeout=self.config.connection_timeout
                 )
                 return conn
-            except asyncio.TimeoutError:
-                raise Exception("Connection pool exhausted")
+            except TimeoutError:
+                raise Exception("Connection pool exhausted") from None
 
     async def release(self, conn: T):
         """Release connection back to pool"""
@@ -234,7 +235,7 @@ class RetryableHTTPClient:
 
     def __init__(self, config: PoolConfig):
         self.config = config
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
         self.circuit_breaker = CircuitBreaker()
 
     async def __aenter__(self):
@@ -277,7 +278,7 @@ class RetryableHTTPClient:
             response.raise_for_status()
             self.circuit_breaker.record_success()
             return response
-        except Exception as e:
+        except Exception:
             self.circuit_breaker.record_failure()
             raise
 
@@ -285,8 +286,8 @@ class RetryableHTTPClient:
 class RedisConnectionPool:
     """Redis connection pool with region awareness"""
 
-    def __init__(self, redis_urls: Dict[str, str], config: PoolConfig):
-        self.pools: Dict[str, aioredis.ConnectionPool] = {}
+    def __init__(self, redis_urls: dict[str, str], config: PoolConfig):
+        self.pools: dict[str, aioredis.ConnectionPool] = {}
         self.config = config
 
         for region, url in redis_urls.items():
@@ -305,7 +306,7 @@ class RedisConnectionPool:
                 health_check_interval=30,
             )
 
-    def get_connection(self, region: Optional[str] = None) -> aioredis.Redis:
+    def get_connection(self, region: str | None = None) -> aioredis.Redis:
         """Get Redis connection for specific region"""
         region = region or current_region.get()
 
@@ -323,7 +324,7 @@ class RedisConnectionPool:
 class DatabaseConnectionPool:
     """Database connection pool with read replica support"""
 
-    def __init__(self, write_url: str, read_urls: List[str], config: PoolConfig):
+    def __init__(self, write_url: str, read_urls: list[str], config: PoolConfig):
         self.write_pool = None  # Initialize with your DB library
         self.read_pools = []  # Initialize read replicas
         self.config = config

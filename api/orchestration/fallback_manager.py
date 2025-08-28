@@ -2,10 +2,11 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class FallbackReason(Enum):
 class FallbackChain:
     """Chain of fallback options."""
 
-    primary: Tuple[str, str]  # (provider, model)
-    fallbacks: List[Tuple[str, str]]  # [(provider, model), ...]
+    primary: tuple[str, str]  # (provider, model)
+    fallbacks: list[tuple[str, str]]  # [(provider, model), ...]
     max_attempts: int = 3
     retry_delay_ms: int = 1000
     exponential_backoff: bool = True
@@ -40,10 +41,10 @@ class FallbackEvent:
     timestamp: datetime
     from_provider: str
     from_model: str
-    to_provider: Optional[str]
-    to_model: Optional[str]
+    to_provider: str | None
+    to_model: str | None
     reason: FallbackReason
-    error_message: Optional[str]
+    error_message: str | None
     attempt_number: int
     success: bool
 
@@ -53,10 +54,10 @@ class FallbackManager:
 
     def __init__(self):
         """Initialize fallback manager."""
-        self.fallback_chains: Dict[str, FallbackChain] = {}
-        self.fallback_history: List[FallbackEvent] = []
-        self.provider_health: Dict[str, float] = {}  # provider -> health score
-        self.circuit_breakers: Dict[str, "CircuitBreaker"] = {}
+        self.fallback_chains: dict[str, FallbackChain] = {}
+        self.fallback_history: list[FallbackEvent] = []
+        self.provider_health: dict[str, float] = {}  # provider -> health score
+        self.circuit_breakers: dict[str, CircuitBreaker] = {}
 
     def register_fallback_chain(self, name: str, chain: FallbackChain):
         """Register a fallback chain.
@@ -72,9 +73,9 @@ class FallbackManager:
         self,
         request_func: Callable,
         chain_name: str,
-        request_args: Dict[str, Any],
-        validation_func: Optional[Callable] = None,
-    ) -> Tuple[Any, Optional[FallbackEvent]]:
+        request_args: dict[str, Any],
+        validation_func: Callable | None = None,
+    ) -> tuple[Any, FallbackEvent | None]:
         """Execute request with automatic fallback.
 
         Args:
@@ -150,7 +151,7 @@ class FallbackManager:
                 self._update_provider_health(provider, True)
                 return response, None
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 last_error = "Request timeout"
                 logger.error(f"Timeout for {provider}:{model}")
                 self._update_provider_health(provider, False)
@@ -267,7 +268,7 @@ class FallbackManager:
                 f"(reason: {event.reason.value})"
             )
 
-    def get_provider_health(self) -> Dict[str, float]:
+    def get_provider_health(self) -> dict[str, float]:
         """Get provider health scores.
 
         Returns:
@@ -275,7 +276,7 @@ class FallbackManager:
         """
         return self.provider_health.copy()
 
-    def get_fallback_stats(self) -> Dict[str, Any]:
+    def get_fallback_stats(self) -> dict[str, Any]:
         """Get fallback statistics.
 
         Returns:
@@ -315,7 +316,7 @@ class FallbackManager:
         }
 
     def create_adaptive_chain(
-        self, primary_model: Tuple[str, str], available_models: List[Tuple[str, str]]
+        self, primary_model: tuple[str, str], available_models: list[tuple[str, str]]
     ) -> FallbackChain:
         """Create adaptive fallback chain based on health scores.
 
@@ -426,7 +427,7 @@ class CircuitBreaker:
             self.state = "open"
             logger.warning("Circuit breaker reopened after failed recovery")
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get circuit breaker state.
 
         Returns:

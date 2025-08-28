@@ -9,22 +9,16 @@ import json
 import logging
 import re
 import subprocess
-import sys
-from collections import defaultdict
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
-from urllib.parse import quote
 
 import click
 import httpx
 import toml
-from packaging import version
 from rich.console import Console
-from rich.table import Table
 from rich.progress import track
-from rich import print as rprint
+from rich.table import Table
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -45,7 +39,7 @@ class PackageHealth:
     dependencies_count: int
     update_frequency: str
     last_release_date: str
-    vulnerabilities: List[Dict]
+    vulnerabilities: list[dict]
     recommendation: str
 
 
@@ -57,15 +51,17 @@ class DependencyReport:
     outdated_packages: int
     vulnerable_packages: int
     health_score: float
-    critical_updates: List[str]
-    package_health: List[PackageHealth]
-    recommendations: List[str]
+    critical_updates: list[str]
+    package_health: list[PackageHealth]
+    recommendations: list[str]
 
 
 class DependencyHealthMonitor:
     """Monitor and analyze dependency health for AI/ML projects."""
     
-    def __init__(self, project_root: Path = Path.cwd()):
+    def __init__(self, project_root: Path | None = None):
+        if project_root is None:
+            project_root = Path.cwd()
         self.project_root = project_root
         self.pyproject_path = project_root / "pyproject.toml"
         self.cache_dir = project_root / ".dependency_cache"
@@ -84,7 +80,7 @@ class DependencyHealthMonitor:
             "min_maintenance_score": 0.7,
         }
     
-    async def get_package_info(self, package: str) -> Optional[Dict]:
+    async def get_package_info(self, package: str) -> dict | None:
         """Fetch package information from PyPI."""
         cache_file = self.cache_dir / f"{package}.json"
         
@@ -92,7 +88,7 @@ class DependencyHealthMonitor:
         if cache_file.exists():
             cache_time = datetime.fromtimestamp(cache_file.stat().st_mtime)
             if datetime.now() - cache_time < timedelta(hours=24):
-                with open(cache_file, 'r') as f:
+                with open(cache_file) as f:
                     return json.load(f)
         
         try:
@@ -114,10 +110,10 @@ class DependencyHealthMonitor:
         try:
             release_dt = datetime.fromisoformat(release_date.replace('Z', '+00:00'))
             return (datetime.now(release_dt.tzinfo) - release_dt).days
-        except:
+        except Exception:
             return 0
     
-    def calculate_popularity_score(self, package_info: Dict) -> float:
+    def calculate_popularity_score(self, package_info: dict) -> float:
         """Calculate popularity score based on downloads and stars."""
         # Simplified scoring - in production would use pypistats API
         score = 0.5  # Base score
@@ -143,7 +139,7 @@ class DependencyHealthMonitor:
         
         return min(score, 1.0)
     
-    def calculate_maintenance_score(self, package_info: Dict) -> float:
+    def calculate_maintenance_score(self, package_info: dict) -> float:
         """Calculate maintenance score based on release frequency."""
         releases = package_info.get("releases", {})
         if not releases:
@@ -157,7 +153,7 @@ class DependencyHealthMonitor:
                     try:
                         dt = datetime.fromisoformat(file_info["upload_time_iso_8601"].replace('Z', '+00:00'))
                         release_dates.append(dt)
-                    except:
+                    except Exception:
                         pass
         
         if not release_dates:
@@ -180,7 +176,7 @@ class DependencyHealthMonitor:
         else:
             return 0.3
     
-    def check_vulnerabilities(self, package: str, version: str) -> List[Dict]:
+    def check_vulnerabilities(self, package: str, version: str) -> list[dict]:
         """Check for known vulnerabilities."""
         vulnerabilities = []
         
@@ -202,7 +198,7 @@ class DependencyHealthMonitor:
                             "description": vuln.get("description"),
                             "fix_version": vuln.get("fix_versions", ["Unknown"])[0]
                         })
-        except:
+        except Exception:
             pass
         
         return vulnerabilities
@@ -276,7 +272,7 @@ class DependencyHealthMonitor:
         
         return health
     
-    def _calculate_update_frequency(self, package_info: Dict) -> str:
+    def _calculate_update_frequency(self, package_info: dict) -> str:
         """Calculate average update frequency."""
         releases = package_info.get("releases", {})
         if len(releases) < 2:
@@ -290,7 +286,7 @@ class DependencyHealthMonitor:
                         dt = datetime.fromisoformat(file_info["upload_time_iso_8601"].replace('Z', '+00:00'))
                         release_dates.append(dt)
                         break
-                    except:
+                    except Exception:
                         pass
         
         if len(release_dates) < 2:
@@ -326,7 +322,7 @@ class DependencyHealthMonitor:
             logger.error("pyproject.toml not found")
             return None
         
-        with open(self.pyproject_path, 'r') as f:
+        with open(self.pyproject_path) as f:
             pyproject = toml.load(f)
         
         dependencies = {}
@@ -369,7 +365,7 @@ class DependencyHealthMonitor:
         
         return report
     
-    def _generate_recommendations(self, healths: List[PackageHealth]) -> List[str]:
+    def _generate_recommendations(self, healths: list[PackageHealth]) -> list[str]:
         """Generate overall recommendations."""
         recommendations = []
         
@@ -472,7 +468,7 @@ class DependencyHealthMonitor:
         md = []
         md.append("# Dependency Health Report")
         md.append(f"\n**Generated:** {report.timestamp}")
-        md.append(f"\n## Summary")
+        md.append("\n## Summary")
         md.append(f"- **Total Packages:** {report.total_packages}")
         md.append(f"- **Outdated:** {report.outdated_packages}")
         md.append(f"- **Vulnerable:** {report.vulnerable_packages}")

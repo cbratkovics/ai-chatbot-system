@@ -4,49 +4,29 @@ REST/GraphQL APIs, webhook system, SDK examples, and enterprise connectors
 """
 
 import asyncio
-import base64
 import hashlib
 import hmac
 import json
 import logging
 import time
 import uuid
-import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any
 
-import aiohttp
-import graphql
 import httpx
 import jwt
-import pydantic
 import redis.asyncio as redis
-import requests
-import sqlalchemy
-from aiohttp import web
-from ariadne import QueryType, graphql_sync, make_executable_schema
-from ariadne.asgi import GraphQL
+from ariadne import QueryType, make_executable_schema
 from celery import Celery
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from graphql import (
-    GraphQLBoolean,
-    GraphQLField,
-    GraphQLFloat,
-    GraphQLInt,
-    GraphQLList,
-    GraphQLObjectType,
-    GraphQLSchema,
-    GraphQLString,
-)
-from graphql.execution.executors.asyncio import AsyncioExecutor
 from pydantic import BaseModel, Field
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, Text, create_engine
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -87,15 +67,15 @@ class ChatSessionCreate(BaseModel):
     model: str = Field(..., description="AI model to use")
     temperature: float = Field(0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(1000, ge=1, le=32000)
-    system_prompt: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    system_prompt: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ChatSessionResponse(BaseModel):
     id: str
     user_id: str
     status: str
-    config: Dict[str, Any]
+    config: dict[str, Any]
     created_at: datetime
     updated_at: datetime
     message_count: int
@@ -106,8 +86,8 @@ class ChatSessionResponse(BaseModel):
 class MessageSend(BaseModel):
     content: str = Field(..., max_length=32000)
     stream: bool = False
-    attachments: List[Dict[str, Any]] = Field(default_factory=list)
-    context: Dict[str, Any] = Field(default_factory=dict)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
+    context: dict[str, Any] = Field(default_factory=dict)
 
 
 class MessageResponse(BaseModel):
@@ -115,16 +95,16 @@ class MessageResponse(BaseModel):
     session_id: str
     role: str
     content: str
-    attachments: List[Dict[str, Any]]
-    metadata: Dict[str, Any]
+    attachments: list[dict[str, Any]]
+    metadata: dict[str, Any]
     created_at: datetime
 
 
 class WebhookConfig(BaseModel):
     url: str = Field(..., description="Webhook endpoint URL")
-    events: List[WebhookEvent] = Field(..., description="Events to subscribe to")
-    secret: Optional[str] = Field(None, description="Secret for signature verification")
-    headers: Dict[str, str] = Field(default_factory=dict)
+    events: list[WebhookEvent] = Field(..., description="Events to subscribe to")
+    secret: str | None = Field(None, description="Secret for signature verification")
+    headers: dict[str, str] = Field(default_factory=dict)
     retry_count: int = Field(3, ge=0, le=10)
     timeout: int = Field(30, ge=1, le=300)
     active: bool = True
@@ -135,11 +115,11 @@ class APIKey:
     id: str
     key: str
     name: str
-    scopes: List[str]
+    scopes: list[str]
     rate_limit: int
     created_at: datetime
-    expires_at: Optional[datetime]
-    last_used: Optional[datetime]
+    expires_at: datetime | None
+    last_used: datetime | None
     is_active: bool
 
 
@@ -148,14 +128,14 @@ class WebhookDelivery:
     id: str
     webhook_id: str
     event: WebhookEvent
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     url: str
-    status_code: Optional[int]
-    response_body: Optional[str]
+    status_code: int | None
+    response_body: str | None
     attempts: int
-    delivered_at: Optional[datetime]
+    delivered_at: datetime | None
     failed: bool
-    error_message: Optional[str]
+    error_message: str | None
 
 
 # SQLAlchemy models
@@ -212,7 +192,7 @@ class EnterpriseIntegrationPlatform:
     Comprehensive enterprise integration platform with multiple protocols and standards
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
 
         # Database
@@ -244,14 +224,14 @@ class EnterpriseIntegrationPlatform:
         self.graphql_schema = None
 
         # Webhook management
-        self.webhook_endpoints: Dict[str, WebhookConfig] = {}
+        self.webhook_endpoints: dict[str, WebhookConfig] = {}
         self.webhook_queue = asyncio.Queue()
 
         # API key management
-        self.api_keys: Dict[str, APIKey] = {}
+        self.api_keys: dict[str, APIKey] = {}
 
         # Rate limiting
-        self.rate_limiters: Dict[str, Dict[str, Any]] = {}
+        self.rate_limiters: dict[str, dict[str, Any]] = {}
 
         # Setup FastAPI
         self._setup_fastapi()
@@ -315,8 +295,8 @@ class EnterpriseIntegrationPlatform:
                         "max_tokens": session.max_tokens,
                         "system_prompt": session.system_prompt,
                     },
-                    "created_at": datetime.now(timezone.utc),
-                    "updated_at": datetime.now(timezone.utc),
+                    "created_at": datetime.now(UTC),
+                    "updated_at": datetime.now(UTC),
                     "message_count": 0,
                     "total_tokens": 0,
                     "total_cost": 0.0,
@@ -339,7 +319,7 @@ class EnterpriseIntegrationPlatform:
 
             except Exception as e:
                 logger.error(f"Session creation error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         @self.rest_app.get("/api/v2/chat/sessions/{session_id}", response_model=ChatSessionResponse)
         async def get_chat_session(session_id: str, user=Depends(get_current_user)):
@@ -355,7 +335,7 @@ class EnterpriseIntegrationPlatform:
                 raise
             except Exception as e:
                 logger.error(f"Session retrieval error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         @self.rest_app.post(
             "/api/v2/chat/sessions/{session_id}/messages", response_model=MessageResponse
@@ -390,7 +370,7 @@ class EnterpriseIntegrationPlatform:
                         "cost": ai_response.get("cost", 0.0),
                         "response_time": ai_response.get("response_time", 0.0),
                     },
-                    "created_at": datetime.now(timezone.utc),
+                    "created_at": datetime.now(UTC),
                 }
 
                 # Store message
@@ -413,7 +393,7 @@ class EnterpriseIntegrationPlatform:
                 raise
             except Exception as e:
                 logger.error(f"Message processing error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         # Webhook Management API
         @self.rest_app.post("/api/v2/webhooks")
@@ -446,7 +426,7 @@ class EnterpriseIntegrationPlatform:
 
             except Exception as e:
                 logger.error(f"Webhook creation error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         @self.rest_app.get("/api/v2/webhooks")
         async def list_webhooks(user=Depends(get_current_user)):
@@ -478,7 +458,7 @@ class EnterpriseIntegrationPlatform:
 
             except Exception as e:
                 logger.error(f"Webhook listing error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         # Analytics API
         @self.rest_app.get("/api/v2/analytics/usage")
@@ -498,7 +478,7 @@ class EnterpriseIntegrationPlatform:
 
             except Exception as e:
                 logger.error(f"Analytics error: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         # Health check
         @self.rest_app.get("/health")
@@ -506,7 +486,7 @@ class EnterpriseIntegrationPlatform:
             """Health check endpoint"""
             return {
                 "status": "healthy",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "version": "2.0.0",
             }
 
@@ -667,13 +647,13 @@ class EnterpriseIntegrationPlatform:
         """Setup webhook delivery system"""
 
         @self.celery.task
-        def deliver_webhook(webhook_id: str, event: str, payload: Dict[str, Any]):
+        def deliver_webhook(webhook_id: str, event: str, payload: dict[str, Any]):
             """Celery task for webhook delivery"""
             asyncio.run(self._deliver_webhook_task(webhook_id, event, payload))
 
         self.deliver_webhook_task = deliver_webhook
 
-    async def _authenticate_request(self, token: str) -> Dict[str, Any]:
+    async def _authenticate_request(self, token: str) -> dict[str, Any]:
         """Authenticate API request"""
         try:
             # Check if it's an API key
@@ -699,10 +679,10 @@ class EnterpriseIntegrationPlatform:
                 }
 
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Invalid token") from None
         except Exception as e:
             logger.error(f"Authentication error: {e}")
-            raise HTTPException(status_code=401, detail="Authentication failed")
+            raise HTTPException(status_code=401, detail="Authentication failed") from e
 
     async def _check_rate_limit(self, api_key: APIKey) -> bool:
         """Check API key rate limits"""
@@ -742,7 +722,7 @@ class EnterpriseIntegrationPlatform:
             logger.error(f"Rate limit check error: {e}")
             return True  # Allow on error
 
-    async def _trigger_webhook(self, event: WebhookEvent, payload: Dict[str, Any]):
+    async def _trigger_webhook(self, event: WebhookEvent, payload: dict[str, Any]):
         """Trigger webhook delivery"""
         try:
             # Find matching webhook endpoints
@@ -751,7 +731,7 @@ class EnterpriseIntegrationPlatform:
                 webhooks = (
                     db.query(WebhookEndpoint)
                     .filter(
-                        WebhookEndpoint.is_active == True,
+                        WebhookEndpoint.is_active.is_(True),
                         WebhookEndpoint.events.contains([event.value]),
                     )
                     .all()
@@ -806,7 +786,7 @@ class EnterpriseIntegrationPlatform:
                 logger.error(f"Webhook delivery worker error: {e}")
                 await asyncio.sleep(1)
 
-    async def _deliver_webhook(self, webhook_data: Dict[str, Any]):
+    async def _deliver_webhook(self, webhook_data: dict[str, Any]):
         """Deliver webhook to endpoint"""
         try:
             delivery_id = webhook_data["delivery_id"]
@@ -820,7 +800,7 @@ class EnterpriseIntegrationPlatform:
             # Prepare payload
             webhook_payload = {
                 "event": event,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "data": payload,
             }
 
@@ -855,7 +835,7 @@ class EnterpriseIntegrationPlatform:
                         delivery.attempts += 1
 
                         if 200 <= response.status_code < 300:
-                            delivery.delivered_at = datetime.now(timezone.utc)
+                            delivery.delivered_at = datetime.now(UTC)
                             delivery.failed = False
                         else:
                             delivery.failed = True
@@ -901,7 +881,7 @@ class EnterpriseIntegrationPlatform:
                     failed_deliveries = (
                         db.query(WebhookDeliveryLog)
                         .filter(
-                            WebhookDeliveryLog.failed == True,
+                            WebhookDeliveryLog.failed.is_(True),
                             WebhookDeliveryLog.attempts < 3,
                             WebhookDeliveryLog.created_at > datetime.utcnow() - timedelta(hours=24),
                         )
@@ -976,7 +956,7 @@ class EnterpriseIntegrationPlatform:
                 name="Test API Key",
                 scopes=["chat:read", "chat:write", "analytics:read"],
                 rate_limit=1000,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 expires_at=None,
                 last_used=None,
                 is_active=True,
@@ -992,7 +972,7 @@ class EnterpriseIntegrationPlatform:
         try:
             db = self.SessionLocal()
             try:
-                webhooks = db.query(WebhookEndpoint).filter(WebhookEndpoint.is_active == True).all()
+                webhooks = db.query(WebhookEndpoint).filter(WebhookEndpoint.is_active.is_(True)).all()
 
                 for webhook in webhooks:
                     self.webhook_endpoints[webhook.id] = WebhookConfig(
@@ -1011,7 +991,7 @@ class EnterpriseIntegrationPlatform:
         except Exception as e:
             logger.error(f"Webhook config loading error: {e}")
 
-    async def _store_session(self, session_data: Dict[str, Any]):
+    async def _store_session(self, session_data: dict[str, Any]):
         """Store chat session in database"""
         try:
             # Store session data
@@ -1024,7 +1004,7 @@ class EnterpriseIntegrationPlatform:
         except Exception as e:
             logger.error(f"Session storage error: {e}")
 
-    async def _get_session(self, session_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    async def _get_session(self, session_id: str, user_id: str) -> dict[str, Any] | None:
         """Get chat session data"""
         try:
             session_data = await self.redis.get(f"session:{session_id}")
@@ -1038,7 +1018,7 @@ class EnterpriseIntegrationPlatform:
             logger.error(f"Session retrieval error: {e}")
             return None
 
-    async def _store_message(self, message_data: Dict[str, Any]):
+    async def _store_message(self, message_data: dict[str, Any]):
         """Store message in database"""
         try:
             # Store message
@@ -1053,8 +1033,8 @@ class EnterpriseIntegrationPlatform:
             logger.error(f"Message storage error: {e}")
 
     async def _process_ai_message(
-        self, session_data: Dict[str, Any], content: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, session_data: dict[str, Any], content: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Process message with AI service"""
         try:
             # This would integrate with the actual AI service
@@ -1082,7 +1062,7 @@ class EnterpriseIntegrationPlatform:
 
     async def _get_user_sessions(
         self, user_id: str, limit: int, offset: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get user's chat sessions"""
         try:
             # This would query the database for user sessions
@@ -1095,7 +1075,7 @@ class EnterpriseIntegrationPlatform:
 
     async def _get_session_messages(
         self, session_id: str, user_id: str, limit: int, offset: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get messages for a session"""
         try:
             # Verify session ownership
@@ -1114,7 +1094,7 @@ class EnterpriseIntegrationPlatform:
 
     async def _generate_usage_analytics(
         self, user_id: str, start_date: datetime, end_date: datetime
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate usage analytics for user"""
         try:
             # This would generate real analytics from database
@@ -1142,7 +1122,7 @@ class EnterpriseIntegrationPlatform:
             logger.error(f"Analytics generation error: {e}")
             return {}
 
-    def generate_sdk_examples(self) -> Dict[str, str]:
+    def generate_sdk_examples(self) -> dict[str, str]:
         """Generate SDK examples for different languages"""
 
         examples = {
@@ -1309,7 +1289,7 @@ mutation SendMessage {
 
         return examples
 
-    async def create_saml_sso_config(self, user_id: str, config: Dict[str, Any]) -> str:
+    async def create_saml_sso_config(self, user_id: str, config: dict[str, Any]) -> str:
         """Create SAML SSO configuration"""
         try:
             config_id = str(uuid.uuid4())
@@ -1336,7 +1316,7 @@ mutation SendMessage {
             logger.error(f"SAML SSO config creation error: {e}")
             raise
 
-    async def create_scim_provisioning(self, user_id: str, config: Dict[str, Any]) -> str:
+    async def create_scim_provisioning(self, user_id: str, config: dict[str, Any]) -> str:
         """Create SCIM user provisioning configuration"""
         try:
             config_id = str(uuid.uuid4())
@@ -1376,7 +1356,7 @@ mutation SendMessage {
 
 
 # Example usage and configuration
-def create_integration_platform(config: Dict[str, Any]) -> EnterpriseIntegrationPlatform:
+def create_integration_platform(config: dict[str, Any]) -> EnterpriseIntegrationPlatform:
     """Create and configure the integration platform"""
 
     platform = EnterpriseIntegrationPlatform(config)

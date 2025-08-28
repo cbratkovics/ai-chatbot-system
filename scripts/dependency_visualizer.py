@@ -4,15 +4,13 @@ Dependency graph visualization for Poetry projects.
 Creates interactive visualizations of package dependencies.
 """
 
-import json
+import logging
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
-import logging
 
 import click
-import toml
 import networkx as nx
+import toml
 from pyvis.network import Network
 
 # Configure logging
@@ -23,7 +21,9 @@ logger = logging.getLogger(__name__)
 class DependencyVisualizer:
     """Create dependency graph visualizations."""
     
-    def __init__(self, project_root: Path = Path.cwd()):
+    def __init__(self, project_root: Path | None = None):
+        if project_root is None:
+            project_root = Path.cwd()
         self.project_root = project_root
         self.pyproject_path = project_root / "pyproject.toml"
         self.output_dir = project_root / "dependency_reports" / "graphs"
@@ -48,7 +48,7 @@ class DependencyVisualizer:
             "external": 15,
         }
     
-    def parse_poetry_lock(self) -> Dict:
+    def parse_poetry_lock(self) -> dict:
         """Parse poetry.lock file for dependency information."""
         lock_file = self.project_root / "poetry.lock"
         
@@ -56,7 +56,7 @@ class DependencyVisualizer:
             logger.warning("poetry.lock not found, generating...")
             subprocess.run(["python3", "-m", "poetry", "lock"], check=True)
         
-        with open(lock_file, 'r') as f:
+        with open(lock_file) as f:
             lock_data = toml.load(f)
         
         return lock_data
@@ -66,29 +66,29 @@ class DependencyVisualizer:
         G = nx.DiGraph()
         
         # Parse pyproject.toml
-        with open(self.pyproject_path, 'r') as f:
+        with open(self.pyproject_path) as f:
             pyproject = toml.load(f)
         
         poetry_config = pyproject.get("tool", {}).get("poetry", {})
         
         # Add main dependencies
         main_deps = poetry_config.get("dependencies", {})
-        for dep, spec in main_deps.items():
+        for dep, _spec in main_deps.items():
             if dep != "python":
                 G.add_node(dep, category="main", level=1)
         
         # Add dev dependencies
         dev_group = poetry_config.get("group", {}).get("dev", {}).get("dependencies", {})
-        for dep, spec in dev_group.items():
+        for dep, _spec in dev_group.items():
             G.add_node(dep, category="dev", level=1)
         
         # Add ML dependencies
         ml_cpu_group = poetry_config.get("group", {}).get("ml-cpu", {}).get("dependencies", {})
-        for dep, spec in ml_cpu_group.items():
+        for dep, _spec in ml_cpu_group.items():
             G.add_node(dep, category="ml", level=1)
         
         ml_gpu_group = poetry_config.get("group", {}).get("ml-gpu", {}).get("dependencies", {})
-        for dep, spec in ml_gpu_group.items():
+        for dep, _spec in ml_gpu_group.items():
             G.add_node(dep, category="ml", level=1)
         
         # Parse lock file for transitive dependencies
@@ -178,7 +178,7 @@ class DependencyVisualizer:
         
         return output_path
     
-    def analyze_graph_metrics(self, G: nx.DiGraph) -> Dict:
+    def analyze_graph_metrics(self, G: nx.DiGraph) -> dict:
         """Analyze graph metrics for insights."""
         metrics = {}
         
@@ -199,7 +199,7 @@ class DependencyVisualizer:
             cycles = list(nx.simple_cycles(G))
             metrics["circular_dependencies"] = len(cycles)
             metrics["circular_deps_list"] = cycles[:5] if cycles else []
-        except:
+        except (nx.NetworkXError, RecursionError):
             metrics["circular_dependencies"] = 0
             metrics["circular_deps_list"] = []
         
@@ -216,7 +216,7 @@ class DependencyVisualizer:
                     metrics["max_depth"] = max_depth
                 else:
                     metrics["max_depth"] = 0
-            except:
+            except (nx.NetworkXError, KeyError, ValueError):
                 metrics["max_depth"] = 0
         
         # Identify potential issues

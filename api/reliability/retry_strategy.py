@@ -4,9 +4,10 @@ import asyncio
 import logging
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Type
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,8 @@ class RetryConfig:
     backoff_multiplier: float = 2.0
     jitter: bool = True
     jitter_factor: float = 0.1
-    retryable_exceptions: Set[Type[Exception]] = None
-    non_retryable_exceptions: Set[Type[Exception]] = None
+    retryable_exceptions: set[type[Exception]] = None
+    non_retryable_exceptions: set[type[Exception]] = None
     retry_on_timeout: bool = True
 
     def __post_init__(self):
@@ -48,7 +49,7 @@ class RetryAttempt:
 
     attempt_number: int
     delay_ms: float
-    exception: Optional[Exception]
+    exception: Exception | None
     timestamp: float
     succeeded: bool
 
@@ -59,7 +60,7 @@ class RetryExecutor:
     def __init__(
         self,
         strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF,
-        config: Optional[RetryConfig] = None,
+        config: RetryConfig | None = None,
     ):
         """Initialize retry executor.
 
@@ -69,11 +70,11 @@ class RetryExecutor:
         """
         self.strategy = strategy
         self.config = config or RetryConfig()
-        self.attempt_history: List[RetryAttempt] = []
+        self.attempt_history: list[RetryAttempt] = []
         self.fibonacci_cache = [0, 1]
 
     async def execute(
-        self, func: Callable, *args, on_retry: Optional[Callable] = None, **kwargs
+        self, func: Callable, *args, on_retry: Callable | None = None, **kwargs
     ) -> Any:
         """Execute function with retry logic.
 
@@ -301,7 +302,7 @@ class RetryExecutor:
         # Default to not retry
         return False
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get retry statistics.
 
         Returns:
@@ -343,7 +344,7 @@ class BulkheadRetryExecutor:
         max_concurrent: int = 10,
         queue_size: int = 100,
         strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF,
-        config: Optional[RetryConfig] = None,
+        config: RetryConfig | None = None,
     ):
         """Initialize bulkhead retry executor.
 
@@ -403,7 +404,7 @@ class BulkheadRetryExecutor:
             finally:
                 self.active_executions -= 1
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get bulkhead status.
 
         Returns:
@@ -421,7 +422,7 @@ class BulkheadRetryExecutor:
 class MaxRetriesExceededException(Exception):
     """Exception raised when max retries exceeded."""
 
-    def __init__(self, message: str, last_exception: Optional[Exception] = None):
+    def __init__(self, message: str, last_exception: Exception | None = None):
         super().__init__(message)
         self.last_exception = last_exception
 

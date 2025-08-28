@@ -1,7 +1,9 @@
 """Anthropic provider implementation."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +12,7 @@ class AnthropicProvider:
     """Anthropic model provider."""
 
     def __init__(
-        self, client: Optional[Any] = None, api_key: Optional[str] = None, max_retries: int = 3
+        self, client: Any | None = None, api_key: str | None = None, max_retries: int = 3
     ):
         """Initialize Anthropic provider.
 
@@ -46,7 +48,7 @@ class AnthropicProvider:
         except Exception as e:
             logger.error(f"Failed to initialize Anthropic client: {e}")
 
-    async def chat_completion(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def chat_completion(self, request: dict[str, Any]) -> dict[str, Any]:
         """Create chat completion.
 
         Args:
@@ -82,8 +84,8 @@ class AnthropicProvider:
             raise
 
     async def stream_completion(
-        self, request: Dict[str, Any]
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+        self, request: dict[str, Any]
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """Stream chat completion.
 
         Args:
@@ -98,7 +100,7 @@ class AnthropicProvider:
         async for chunk in stream:
             yield self._format_stream_chunk(chunk)
 
-    def format_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def format_messages(self, messages: list[dict[str, str]]) -> list[dict[str, str]]:
         """Format messages for Anthropic API.
 
         Args:
@@ -136,7 +138,7 @@ class AnthropicProvider:
 
         return model_map.get(model, model)
 
-    def _format_response(self, response: Any) -> Dict[str, Any]:
+    def _format_response(self, response: Any) -> dict[str, Any]:
         """Format Anthropic response to OpenAI format.
 
         Args:
@@ -167,7 +169,7 @@ class AnthropicProvider:
             },
         }
 
-    def _format_stream_chunk(self, chunk: Any) -> Dict[str, Any]:
+    def _format_stream_chunk(self, chunk: Any) -> dict[str, Any]:
         """Format stream chunk.
 
         Args:

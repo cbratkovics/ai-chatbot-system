@@ -1,11 +1,10 @@
 """Rate limiter implementations with token bucket and sliding window."""
 
-import asyncio
 import json
 import logging
 import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Set
+from datetime import datetime
+from typing import Any
 
 import redis.asyncio as aioredis
 
@@ -20,9 +19,9 @@ class RateLimiter:
         redis_client: aioredis.Redis,
         window_seconds: int = 60,
         max_requests: int = 100,
-        bypass_keys: Optional[Set[str]] = None,
+        bypass_keys: set[str] | None = None,
         grace_period_seconds: int = 0,
-        metrics_collector: Optional[Any] = None,
+        metrics_collector: Any | None = None,
     ):
         """Initialize rate limiter.
 
@@ -108,7 +107,7 @@ class RateLimiter:
 
     async def get_rate_limit_headers(
         self, key: str, limit: int, remaining: int, reset_time: datetime
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """Get rate limit headers.
 
         Args:
@@ -312,7 +311,7 @@ class DistributedRateLimiter(RateLimiter):
 class TenantRateLimiter(TokenBucketRateLimiter):
     """Tenant-specific rate limiter."""
 
-    async def get_tenant_limits(self, tenant_id: str) -> Dict[str, Any]:
+    async def get_tenant_limits(self, tenant_id: str) -> dict[str, Any]:
         """Get tenant-specific limits.
 
         Args:

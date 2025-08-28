@@ -2,11 +2,11 @@
 
 import asyncio
 import logging
-import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +40,10 @@ class ReconnectionInfo:
     session_id: str
     state: ReconnectionState
     attempts: int
-    last_attempt: Optional[datetime]
-    last_success: Optional[datetime]
-    last_failure: Optional[datetime]
-    next_retry: Optional[datetime]
+    last_attempt: datetime | None
+    last_success: datetime | None
+    last_failure: datetime | None
+    next_retry: datetime | None
     error_count: int
     errors: list
 
@@ -51,24 +51,24 @@ class ReconnectionInfo:
 class ReconnectionManager:
     """Manages WebSocket reconnection with exponential backoff."""
 
-    def __init__(self, config: Optional[ReconnectionConfig] = None):
+    def __init__(self, config: ReconnectionConfig | None = None):
         """Initialize reconnection manager.
 
         Args:
             config: Reconnection configuration
         """
         self.config = config or ReconnectionConfig()
-        self.sessions: Dict[str, ReconnectionInfo] = {}
-        self.reconnect_tasks: Dict[str, asyncio.Task] = {}
-        self.callbacks: Dict[str, Dict[str, Callable]] = {}
+        self.sessions: dict[str, ReconnectionInfo] = {}
+        self.reconnect_tasks: dict[str, asyncio.Task] = {}
+        self.callbacks: dict[str, dict[str, Callable]] = {}
 
     def register_session(
         self,
         session_id: str,
-        on_connect: Optional[Callable] = None,
-        on_disconnect: Optional[Callable] = None,
-        on_reconnect: Optional[Callable] = None,
-        on_failure: Optional[Callable] = None,
+        on_connect: Callable | None = None,
+        on_disconnect: Callable | None = None,
+        on_reconnect: Callable | None = None,
+        on_failure: Callable | None = None,
     ):
         """Register session for reconnection management.
 
@@ -134,7 +134,7 @@ class ReconnectionManager:
             logger.info(f"Session {session_id} connected successfully")
             return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"Connection timeout for session {session_id}")
             info.state = ReconnectionState.FAILED
             info.last_failure = datetime.utcnow()
@@ -149,7 +149,7 @@ class ReconnectionManager:
             return False
 
     async def handle_disconnection(
-        self, session_id: str, reason: Optional[str] = None, reconnect: bool = True
+        self, session_id: str, reason: str | None = None, reconnect: bool = True
     ):
         """Handle disconnection and initiate reconnection.
 
@@ -227,7 +227,7 @@ class ReconnectionManager:
                     logger.error(f"No reconnect function for session {session_id}")
                     break
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(
                     f"Reconnection timeout for session {session_id} " f"(attempt {info.attempts})"
                 )
@@ -312,7 +312,7 @@ class ReconnectionManager:
         # Start new reconnection
         await self.handle_disconnection(session_id, reason="Forced reconnection", reconnect=True)
 
-    def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_session_info(self, session_id: str) -> dict[str, Any] | None:
         """Get reconnection information for session.
 
         Args:
@@ -339,7 +339,7 @@ class ReconnectionManager:
             "recent_errors": info.errors[-5:],  # Last 5 errors
         }
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get overall reconnection statistics.
 
         Returns:

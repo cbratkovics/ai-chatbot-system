@@ -5,13 +5,11 @@ This script checks that all advertised capabilities are actually implemented and
 """
 
 import json
-import sys
-import os
-from pathlib import Path
-from typing import Dict, List, Tuple
-import subprocess
-import time
 import logging
+import subprocess
+import sys
+import time
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -34,7 +32,7 @@ class ClaimValidator:
         self.failed = []
         self.warnings = []
     
-    def load_benchmark_results(self) -> Dict:
+    def load_benchmark_results(self) -> dict:
         """Load the latest benchmark results"""
         latest_file = self.results_dir / 'latest.json'
         
@@ -47,10 +45,10 @@ class ClaimValidator:
                 logger.warning("No benchmark results found. Run benchmarks first.")
                 return {}
         
-        with open(latest_file, 'r') as f:
+        with open(latest_file) as f:
             return json.load(f)
     
-    def load_cost_analysis(self) -> Dict:
+    def load_cost_analysis(self) -> dict:
         """Load cost analysis results"""
         cost_files = list(self.results_dir.glob('cost_analysis_*.json'))
         
@@ -59,10 +57,10 @@ class ClaimValidator:
             return {}
         
         latest_cost = sorted(cost_files)[-1]
-        with open(latest_cost, 'r') as f:
+        with open(latest_cost) as f:
             return json.load(f)
     
-    def validate_latency_claim(self) -> Tuple[bool, str]:
+    def validate_latency_claim(self) -> tuple[bool, str]:
         """Verify <200ms P95 latency claim"""
         results = self.load_benchmark_results()
         
@@ -89,7 +87,7 @@ class ClaimValidator:
         
         return False, "Latency metrics not found in results"
     
-    def validate_cost_reduction(self) -> Tuple[bool, str]:
+    def validate_cost_reduction(self) -> tuple[bool, str]:
         """Verify 30% cost reduction claim"""
         cost_analysis = self.load_cost_analysis()
         
@@ -114,7 +112,7 @@ class ClaimValidator:
         
         return False, "Cost reduction metrics not found"
     
-    def validate_concurrent_users(self) -> Tuple[bool, str]:
+    def validate_concurrent_users(self) -> tuple[bool, str]:
         """Verify 100+ concurrent users claim"""
         results = self.load_benchmark_results()
         
@@ -138,7 +136,7 @@ class ClaimValidator:
         
         return False, "Concurrent user metrics not found"
     
-    def validate_cache_hit_rate(self) -> Tuple[bool, str]:
+    def validate_cache_hit_rate(self) -> tuple[bool, str]:
         """Verify cache effectiveness"""
         results = self.load_benchmark_results()
         
@@ -156,7 +154,7 @@ class ClaimValidator:
         
         return False, "Cache metrics not found"
     
-    def validate_multi_model_support(self) -> Tuple[bool, str]:
+    def validate_multi_model_support(self) -> tuple[bool, str]:
         """Verify multi-model integration claim"""
         # Check if provider implementations exist
         provider_files = [
@@ -174,7 +172,7 @@ class ClaimValidator:
         else:
             return False, "No provider implementations found"
     
-    def validate_websocket_support(self) -> Tuple[bool, str]:
+    def validate_websocket_support(self) -> tuple[bool, str]:
         """Verify WebSocket support claim"""
         # Check for WebSocket implementation
         ws_file = Path('api/websocket/manager.py')
@@ -191,7 +189,7 @@ class ClaimValidator:
         
         return False, "WebSocket implementation not found"
     
-    def validate_monitoring_setup(self) -> Tuple[bool, str]:
+    def validate_monitoring_setup(self) -> tuple[bool, str]:
         """Verify monitoring and observability setup"""
         monitoring_files = [
             Path('monitoring/grafana/dashboards'),
@@ -207,13 +205,13 @@ class ClaimValidator:
         else:
             return False, "Monitoring configuration not found"
     
-    def validate_test_coverage(self) -> Tuple[bool, str]:
+    def validate_test_coverage(self) -> tuple[bool, str]:
         """Check if test coverage meets standards"""
         coverage_file = Path('tests/coverage_reports/coverage.xml')
         
         if coverage_file.exists():
             # Parse coverage report (simplified)
-            with open(coverage_file, 'r') as f:
+            with open(coverage_file) as f:
                 content = f.read()
                 # Look for coverage percentage (this is simplified)
                 if 'line-rate="0.8' in content or 'line-rate="0.9' in content:
@@ -237,7 +235,7 @@ class ClaimValidator:
         else:
             return False, "Test structure not found"
     
-    def validate_documentation(self) -> Tuple[bool, str]:
+    def validate_documentation(self) -> tuple[bool, str]:
         """Verify documentation completeness"""
         required_docs = [
             Path('README.md'),
@@ -257,7 +255,7 @@ class ClaimValidator:
         else:
             return False, f"Most documentation missing ({len(missing)}/{len(required_docs)})"
     
-    def validate_ci_cd_pipeline(self) -> Tuple[bool, str]:
+    def validate_ci_cd_pipeline(self) -> tuple[bool, str]:
         """Verify CI/CD pipeline configuration"""
         ci_files = [
             Path('.github/workflows/ci.yml'),
@@ -377,7 +375,7 @@ class ClaimValidator:
         
         print(f"\nDetailed report saved to: {output_path}")
     
-    def get_recommendations(self) -> List[str]:
+    def get_recommendations(self) -> list[str]:
         """Get recommendations based on validation results"""
         recommendations = []
         

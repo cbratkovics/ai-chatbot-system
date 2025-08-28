@@ -1,24 +1,17 @@
 """WebSocket message handlers for chat functionality."""
 
-import asyncio
 import logging
 import time
-from typing import Dict, Optional
 from uuid import UUID, uuid4
 
-from api.config import settings
-from api.models.chat import Message, MessageRole
-from api.providers import CompletionRequest
+from api.providers import CompletionRequest, ProviderError, ProviderOrchestrator
 from api.providers import Message as ProviderMessage
-from api.providers import ProviderError, ProviderOrchestrator
 
 from .events import (
     AuthFailedEvent,
-    AuthRequestEvent,
     AuthSuccessEvent,
     ErrorEvent,
     EventType,
-    MessageEvent,
     ResponseEvent,
     StreamChunkEvent,
     StreamEndEvent,
@@ -42,7 +35,7 @@ class WebSocketHandler:
         self.provider_orchestrator = provider_orchestrator
 
         # Event handlers mapping
-        self.handlers: Dict[EventType, callable] = {
+        self.handlers: dict[EventType, callable] = {
             EventType.AUTH_REQUEST: self._handle_auth_request,
             EventType.CHAT_MESSAGE: self._handle_chat_message,
             EventType.HEARTBEAT: self._handle_heartbeat,
@@ -74,7 +67,7 @@ class WebSocketHandler:
             )
             try:
                 await connection.send_event(error_event)
-            except:
+            except Exception:
                 pass  # Connection may be closed
 
         finally:
@@ -283,7 +276,6 @@ class WebSocketHandler:
     ):
         """Handle non-streaming chat completion."""
         message_id = uuid4()
-        start_time = time.time()
 
         try:
             # Get completion from provider
@@ -374,7 +366,7 @@ class WebSocketHandler:
             await connection.send_event(system_event)
 
     async def broadcast_system_message(
-        self, message: str, level: str = "info", tenant_id: Optional[UUID] = None
+        self, message: str, level: str = "info", tenant_id: UUID | None = None
     ):
         """Broadcast system message to connections."""
         system_event = SystemMessageEvent(message=message, level=level)

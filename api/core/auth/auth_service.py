@@ -1,10 +1,11 @@
 """Authentication service for JWT and API key management."""
 
 import hashlib
+import json
 import logging
 import secrets
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import jwt
 import redis.asyncio as aioredis
@@ -21,8 +22,8 @@ class AuthService:
         secret_key: str,
         algorithm: str = "HS256",
         token_expiry_minutes: int = 60,
-        db: Optional[AsyncSession] = None,
-        redis_client: Optional[aioredis.Redis] = None,
+        db: AsyncSession | None = None,
+        redis_client: aioredis.Redis | None = None,
     ):
         """Initialize auth service.
 
@@ -39,7 +40,7 @@ class AuthService:
         self.db = db
         self.redis_client = redis_client
 
-    def generate_token(self, payload: Dict[str, Any], expiry_minutes: Optional[int] = None) -> str:
+    def generate_token(self, payload: dict[str, Any], expiry_minutes: int | None = None) -> str:
         """Generate JWT token.
 
         Args:
@@ -62,7 +63,7 @@ class AuthService:
 
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
-    def validate_token(self, token: str) -> Dict[str, Any]:
+    def validate_token(self, token: str) -> dict[str, Any]:
         """Validate JWT token.
 
         Args:
@@ -79,7 +80,7 @@ class AuthService:
         except jwt.InvalidTokenError as e:
             return {"valid": False, "error": f"Invalid token: {str(e)}"}
 
-    def refresh_token(self, token: str) -> Dict[str, Any]:
+    def refresh_token(self, token: str) -> dict[str, Any]:
         """Refresh JWT token.
 
         Args:
@@ -118,8 +119,8 @@ class AuthService:
         return {"success": True, "token": new_token}
 
     async def generate_api_key(
-        self, tenant_id: str, name: str, expiry_days: Optional[int] = None
-    ) -> Dict[str, Any]:
+        self, tenant_id: str, name: str, expiry_days: int | None = None
+    ) -> dict[str, Any]:
         """Generate API key.
 
         Args:
@@ -166,7 +167,7 @@ class AuthService:
 
         return api_key_data
 
-    async def validate_api_key(self, api_key: str) -> Dict[str, Any]:
+    async def validate_api_key(self, api_key: str) -> dict[str, Any]:
         """Validate API key.
 
         Args:
@@ -186,7 +187,7 @@ class AuthService:
             from api.models import APIKey
 
             result = await self.db.execute(
-                select(APIKey).where(APIKey.key_hash == key_hash, APIKey.active == True)
+                select(APIKey).where(APIKey.key_hash == key_hash, APIKey.active.is_(True))
             )
 
             api_key_record = result.scalar_one_or_none()
@@ -210,7 +211,7 @@ class AuthService:
             logger.error(f"API key validation error: {e}")
             return {"valid": False, "error": "Validation failed"}
 
-    def has_permission(self, user_context: Dict[str, Any], permission: str) -> bool:
+    def has_permission(self, user_context: dict[str, Any], permission: str) -> bool:
         """Check if user has permission.
 
         Args:
@@ -223,7 +224,7 @@ class AuthService:
         permissions = user_context.get("permissions", [])
         return permission in permissions
 
-    def has_role(self, user_context: Dict[str, Any], role: str) -> bool:
+    def has_role(self, user_context: dict[str, Any], role: str) -> bool:
         """Check if user has role.
 
         Args:
@@ -276,7 +277,7 @@ class AuthService:
 
         return False
 
-    async def create_session(self, session_data: Dict[str, Any]) -> str:
+    async def create_session(self, session_data: dict[str, Any]) -> str:
         """Create user session.
 
         Args:
@@ -295,7 +296,7 @@ class AuthService:
 
         return session_id
 
-    async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session(self, session_id: str) -> dict[str, Any] | None:
         """Get session data.
 
         Args:
@@ -346,7 +347,7 @@ class AuthService:
 
         return False
 
-    async def exchange_oauth_token(self, provider: str, oauth_token: str) -> Dict[str, Any]:
+    async def exchange_oauth_token(self, provider: str, oauth_token: str) -> dict[str, Any]:
         """Exchange OAuth token for internal token.
 
         Args:
@@ -378,7 +379,7 @@ class AuthService:
 
     async def _get_oauth_user_info(
         self, provider: str, oauth_token: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get user info from OAuth provider.
 
         Args:

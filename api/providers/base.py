@@ -4,9 +4,10 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -29,9 +30,9 @@ class ProviderError(Exception):
     def __init__(
         self,
         message: str,
-        error_code: Optional[str] = None,
+        error_code: str | None = None,
         retryable: bool = True,
-        provider_name: Optional[str] = None,
+        provider_name: str | None = None,
     ):
         super().__init__(message)
         self.message = message
@@ -44,7 +45,7 @@ class RateLimitError(ProviderError):
     """Rate limit exceeded error."""
 
     def __init__(
-        self, message: str, retry_after: Optional[int] = None, provider_name: Optional[str] = None
+        self, message: str, retry_after: int | None = None, provider_name: str | None = None
     ):
         super().__init__(
             message, error_code="rate_limit", retryable=True, provider_name=provider_name
@@ -55,7 +56,7 @@ class RateLimitError(ProviderError):
 class QuotaExceededError(ProviderError):
     """Quota exceeded error."""
 
-    def __init__(self, message: str, provider_name: Optional[str] = None):
+    def __init__(self, message: str, provider_name: str | None = None):
         super().__init__(
             message, error_code="quota_exceeded", retryable=False, provider_name=provider_name
         )
@@ -64,7 +65,7 @@ class QuotaExceededError(ProviderError):
 class AuthenticationError(ProviderError):
     """Authentication failed error."""
 
-    def __init__(self, message: str, provider_name: Optional[str] = None):
+    def __init__(self, message: str, provider_name: str | None = None):
         super().__init__(
             message, error_code="authentication", retryable=False, provider_name=provider_name
         )
@@ -73,7 +74,7 @@ class AuthenticationError(ProviderError):
 class ModelNotFoundError(ProviderError):
     """Model not found error."""
 
-    def __init__(self, message: str, model: str, provider_name: Optional[str] = None):
+    def __init__(self, message: str, model: str, provider_name: str | None = None):
         super().__init__(
             message, error_code="model_not_found", retryable=False, provider_name=provider_name
         )
@@ -83,7 +84,7 @@ class ModelNotFoundError(ProviderError):
 class ContentFilterError(ProviderError):
     """Content filter violation error."""
 
-    def __init__(self, message: str, provider_name: Optional[str] = None):
+    def __init__(self, message: str, provider_name: str | None = None):
         super().__init__(
             message, error_code="content_filter", retryable=False, provider_name=provider_name
         )
@@ -124,8 +125,8 @@ class CompletionResponse:
     provider: str
     latency_ms: float
     cached: bool = False
-    finish_reason: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    finish_reason: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -134,9 +135,9 @@ class StreamChunk:
 
     id: UUID
     delta: str
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
     chunk_index: int = 0
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -145,30 +146,30 @@ class Message:
 
     role: str  # "system", "user", "assistant"
     content: str
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
 class CompletionRequest:
     """Request for completion."""
 
-    messages: List[Message]
+    messages: list[Message]
     model: str
     temperature: float = 0.7
-    max_tokens: Optional[int] = 1000
+    max_tokens: int | None = 1000
     stream: bool = False
 
     # Advanced parameters
-    top_p: Optional[float] = 1.0
-    frequency_penalty: Optional[float] = 0.0
-    presence_penalty: Optional[float] = 0.0
-    stop: Optional[List[str]] = None
+    top_p: float | None = 1.0
+    frequency_penalty: float | None = 0.0
+    presence_penalty: float | None = 0.0
+    stop: list[str] | None = None
 
     # Context
-    conversation_id: Optional[UUID] = None
+    conversation_id: UUID | None = None
     tenant_id: UUID = None
-    user_id: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    user_id: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -177,7 +178,7 @@ class ProviderConfig:
 
     name: str
     api_key: str
-    base_url: Optional[str] = None
+    base_url: str | None = None
     timeout: int = 30
     max_retries: int = 3
     max_concurrent_requests: int = 10
@@ -187,7 +188,7 @@ class ProviderConfig:
     completion_cost_per_1k: float = 0.002
 
     # Model configuration
-    supported_models: List[str] = None
+    supported_models: list[str] = None
     default_model: str = "default"
     max_context_length: int = 4000
 
@@ -222,7 +223,7 @@ class ProviderMetrics:
         latency_ms: float,
         tokens: int = 0,
         cost: float = 0.0,
-        error: Optional[Exception] = None,
+        error: Exception | None = None,
     ):
         """Record a request metric."""
         self.requests_total += 1
@@ -358,14 +359,14 @@ class BaseProvider(ABC):
                                 error_code="timeout",
                                 retryable=True,
                                 provider_name=self.name,
-                            )
+                            ) from e
                         else:
                             raise ProviderError(
                                 f"Request failed: {str(e)}",
                                 error_code="unknown",
                                 retryable=True,
                                 provider_name=self.name,
-                            )
+                            ) from e
 
                     # Add provider name if not set
                     if not e.provider_name:
@@ -409,7 +410,7 @@ class BaseProvider(ABC):
                         error_code="stream_error",
                         retryable=False,
                         provider_name=self.name,
-                    )
+                    ) from e
 
                 raise
 
@@ -425,7 +426,7 @@ class BaseProvider(ABC):
         ) * self.config.completion_cost_per_1k
         return usage
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check."""
         return {
             "provider": self.name,

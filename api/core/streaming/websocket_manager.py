@@ -1,13 +1,12 @@
 """WebSocket connection manager with pooling and heartbeat."""
 
 import asyncio
-import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
@@ -32,18 +31,18 @@ class WebSocketManager:
         self.heartbeat_interval = heartbeat_interval
         self.connection_timeout = connection_timeout
 
-        self.connections: Dict[str, Dict[str, Any]] = {}
-        self.user_connections: Dict[str, Set[str]] = {}
-        self.room_connections: Dict[str, Set[str]] = {}
+        self.connections: dict[str, dict[str, Any]] = {}
+        self.user_connections: dict[str, set[str]] = {}
+        self.room_connections: dict[str, set[str]] = {}
 
         self.is_running = False
-        self.heartbeat_task: Optional[asyncio.Task] = None
+        self.heartbeat_task: asyncio.Task | None = None
 
     async def accept_connection(
         self,
         websocket: WebSocket,
-        user_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        user_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Accept WebSocket connection.
 
@@ -108,7 +107,7 @@ class WebSocketManager:
             if not self.user_connections[user_id]:
                 del self.user_connections[user_id]
 
-        for room_id, connections in self.room_connections.items():
+        for _room_id, connections in self.room_connections.items():
             connections.discard(connection_id)
 
         logger.info(f"Disconnected connection {connection_id}")
@@ -116,7 +115,7 @@ class WebSocketManager:
         if not self.connections and self.is_running:
             await self.stop_heartbeat()
 
-    async def send_to_connection(self, connection_id: str, message: Dict[str, Any]) -> bool:
+    async def send_to_connection(self, connection_id: str, message: dict[str, Any]) -> bool:
         """Send message to specific connection.
 
         Args:
@@ -139,7 +138,7 @@ class WebSocketManager:
             await self.disconnect(connection_id)
             return False
 
-    async def send_to_user(self, user_id: str, message: Dict[str, Any]) -> int:
+    async def send_to_user(self, user_id: str, message: dict[str, Any]) -> int:
         """Send message to all connections of a user.
 
         Args:
@@ -159,7 +158,7 @@ class WebSocketManager:
 
         return success_count
 
-    async def broadcast(self, message: Dict[str, Any], exclude: Optional[Set[str]] = None) -> int:
+    async def broadcast(self, message: dict[str, Any], exclude: set[str] | None = None) -> int:
         """Broadcast message to all connections.
 
         Args:
@@ -216,7 +215,7 @@ class WebSocketManager:
         logger.info(f"Connection {connection_id} left room {room_id}")
 
     async def send_to_room(
-        self, room_id: str, message: Dict[str, Any], exclude: Optional[Set[str]] = None
+        self, room_id: str, message: dict[str, Any], exclude: set[str] | None = None
     ) -> int:
         """Send message to all connections in room.
 
@@ -318,7 +317,7 @@ class WebSocketManager:
         """
         return len(self.room_connections)
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get connection statistics.
 
         Returns:

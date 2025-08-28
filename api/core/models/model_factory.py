@@ -1,7 +1,8 @@
 """Model factory for provider abstraction using strategy pattern."""
 
+import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class ModelFactory:
             logger.error(f"Health check failed for {provider_name}: {e}")
             return False
 
-    async def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Process chat request.
 
         Args:
@@ -141,7 +142,7 @@ class ModelFactory:
 
             return response
 
-    def _select_cost_optimized_model(self, request: Dict[str, Any]) -> str:
+    def _select_cost_optimized_model(self, request: dict[str, Any]) -> str:
         """Select cost-optimized model.
 
         Args:
@@ -181,7 +182,7 @@ class ModelFactory:
 
         return fallback_map.get(model, self.providers.get(self.default_provider))
 
-    def get_supported_models(self) -> List[str]:
+    def get_supported_models(self) -> list[str]:
         """Get list of supported models.
 
         Returns:
@@ -192,7 +193,7 @@ class ModelFactory:
             models.extend(provider.supported_models)
         return models
 
-    def get_provider_stats(self) -> Dict[str, Any]:
+    def get_provider_stats(self) -> dict[str, Any]:
         """Get provider statistics.
 
         Returns:

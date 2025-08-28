@@ -5,10 +5,11 @@ import logging
 import statistics
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,8 @@ class CircuitMetrics:
     failed_requests: int = 0
     timeout_requests: int = 0
     consecutive_failures: int = 0
-    last_failure_time: Optional[datetime] = None
-    last_success_time: Optional[datetime] = None
+    last_failure_time: datetime | None = None
+    last_success_time: datetime | None = None
     response_times: deque = None
     error_percentages: deque = None
 
@@ -88,7 +89,7 @@ class HystrixCircuitBreaker:
         self.on_half_open_callback = None
 
     async def call(
-        self, func: Callable, *args, fallback: Optional[Callable] = None, **kwargs
+        self, func: Callable, *args, fallback: Callable | None = None, **kwargs
     ) -> Any:
         """Execute function with circuit breaker protection.
 
@@ -121,16 +122,16 @@ class HystrixCircuitBreaker:
 
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Record timeout
             await self._record_timeout()
 
             if fallback:
                 return await self._execute_fallback(fallback, *args, **kwargs)
             else:
-                raise CircuitTimeoutException(f"Request timed out after {self.timeout_ms}ms")
+                raise CircuitTimeoutException(f"Request timed out after {self.timeout_ms}ms") from None
 
-        except Exception as e:
+        except Exception:
             # Record failure
             await self._record_failure()
 
@@ -202,7 +203,7 @@ class HystrixCircuitBreaker:
         time_in_open = (datetime.utcnow() - self.state_changed_at).total_seconds() * 1000
         return time_in_open >= self.recovery_timeout_ms
 
-    def _get_recent_requests(self) -> List[Dict[str, Any]]:
+    def _get_recent_requests(self) -> list[dict[str, Any]]:
         """Get requests in rolling window.
 
         Returns:
@@ -354,7 +355,7 @@ class HystrixCircuitBreaker:
 
         logger.info(f"Circuit {self.name} reset")
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get circuit breaker metrics.
 
         Returns:
@@ -398,7 +399,7 @@ class CircuitBreakerManager:
 
     def __init__(self):
         """Initialize circuit breaker manager."""
-        self.circuit_breakers: Dict[str, HystrixCircuitBreaker] = {}
+        self.circuit_breakers: dict[str, HystrixCircuitBreaker] = {}
 
     def get_or_create(self, name: str, **config) -> HystrixCircuitBreaker:
         """Get or create circuit breaker.
@@ -415,7 +416,7 @@ class CircuitBreakerManager:
 
         return self.circuit_breakers[name]
 
-    def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_metrics(self) -> dict[str, dict[str, Any]]:
         """Get metrics for all circuit breakers.
 
         Returns:
@@ -423,7 +424,7 @@ class CircuitBreakerManager:
         """
         return {name: cb.get_metrics() for name, cb in self.circuit_breakers.items()}
 
-    def get_open_circuits(self) -> List[str]:
+    def get_open_circuits(self) -> list[str]:
         """Get list of open circuits.
 
         Returns:
@@ -436,7 +437,7 @@ class CircuitBreakerManager:
         for cb in self.circuit_breakers.values():
             cb.reset()
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on all circuits.
 
         Returns:

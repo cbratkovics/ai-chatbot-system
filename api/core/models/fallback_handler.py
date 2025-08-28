@@ -2,8 +2,8 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class FallbackHandler:
         retry_count: int = 3,
         circuit_breaker_threshold: int = 5,
         circuit_reset_timeout: int = 60,
-        metrics_collector: Optional[Any] = None,
+        metrics_collector: Any | None = None,
     ):
         """Initialize fallback handler.
 
@@ -43,7 +43,7 @@ class FallbackHandler:
         self.total_requests = 0
         self.fallback_count = 0
 
-    async def execute_with_fallback(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_with_fallback(self, request: dict[str, Any]) -> dict[str, Any]:
         """Execute request with fallback logic.
 
         Args:
@@ -77,7 +77,7 @@ class FallbackHandler:
             logger.error(f"Secondary provider also failed: {e}")
             raise
 
-    async def _try_primary(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _try_primary(self, request: dict[str, Any]) -> dict[str, Any]:
         """Try primary provider with retries.
 
         Args:
@@ -89,7 +89,7 @@ class FallbackHandler:
         for attempt in range(self.retry_count):
             try:
                 return await self.primary.chat_completion(request)
-            except Exception as e:
+            except Exception:
                 if attempt == self.retry_count - 1:
                     raise
 
@@ -157,7 +157,7 @@ class FallbackHandler:
 
         return None
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get fallback statistics.
 
         Returns:
@@ -174,7 +174,7 @@ class FallbackHandler:
             "circuit_breaker_threshold": self.circuit_breaker_threshold,
         }
 
-    async def test_failover(self) -> Dict[str, Any]:
+    async def test_failover(self) -> dict[str, Any]:
         """Test failover mechanism.
 
         Returns:

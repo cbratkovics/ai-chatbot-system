@@ -1,10 +1,8 @@
 """Usage tracking and billing for multi-tenant system."""
 
-import json
 import logging
 from datetime import datetime, timedelta
-from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +21,7 @@ class UsageTracker:
         method: str,
         response_time_ms: float,
         status_code: int,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ):
         """Track API call for billing and analytics.
 
@@ -66,7 +64,7 @@ class UsageTracker:
         output_tokens: int,
         total_tokens: int,
         cost: float,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ):
         """Track token usage for LLM calls.
 
@@ -111,7 +109,7 @@ class UsageTracker:
         messages_sent: int,
         messages_received: int,
         duration_seconds: float,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ):
         """Track WebSocket connection usage.
 
@@ -153,7 +151,7 @@ class UsageTracker:
         storage_type: str,
         size_bytes: int,
         operation: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ):
         """Track storage usage.
 
@@ -183,7 +181,7 @@ class UsageTracker:
 
     async def get_usage_summary(
         self, tenant_id: str, start_date: datetime, end_date: datetime
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get comprehensive usage summary for billing period.
 
         Args:
@@ -222,7 +220,7 @@ class UsageTracker:
 
         return summary
 
-    async def get_real_time_usage(self, tenant_id: str) -> Dict[str, Any]:
+    async def get_real_time_usage(self, tenant_id: str) -> dict[str, Any]:
         """Get real-time usage metrics.
 
         Args:
@@ -257,7 +255,7 @@ class UsageTracker:
             "metrics": metrics,
         }
 
-    async def get_usage_trends(self, tenant_id: str, days: int = 7) -> Dict[str, Any]:
+    async def get_usage_trends(self, tenant_id: str, days: int = 7) -> dict[str, Any]:
         """Get usage trends over time.
 
         Args:
@@ -314,7 +312,7 @@ class UsageTracker:
 
         return trends
 
-    async def generate_invoice(self, tenant_id: str, billing_period: str) -> Dict[str, Any]:
+    async def generate_invoice(self, tenant_id: str, billing_period: str) -> dict[str, Any]:
         """Generate invoice for billing period.
 
         Args:
@@ -507,7 +505,7 @@ class UsageTracker:
 
         return 0.0
 
-    async def _store_api_usage(self, usage_data: Dict):
+    async def _store_api_usage(self, usage_data: dict):
         """Store API usage in database."""
         if not self.db:
             return
@@ -521,7 +519,7 @@ class UsageTracker:
         except Exception as e:
             logger.error(f"Failed to store API usage: {e}")
 
-    async def _store_token_usage(self, usage_data: Dict):
+    async def _store_token_usage(self, usage_data: dict):
         """Store token usage in database."""
         if not self.db:
             return
@@ -535,7 +533,7 @@ class UsageTracker:
         except Exception as e:
             logger.error(f"Failed to store token usage: {e}")
 
-    async def _store_websocket_usage(self, usage_data: Dict):
+    async def _store_websocket_usage(self, usage_data: dict):
         """Store WebSocket usage in database."""
         if not self.db:
             return
@@ -556,7 +554,7 @@ class UsageTracker:
         size_bytes: int,
         operation: str,
         timestamp: datetime,
-        metadata: Optional[Dict],
+        metadata: dict | None,
     ):
         """Store storage event in database."""
         if not self.db:

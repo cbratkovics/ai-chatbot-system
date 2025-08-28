@@ -3,9 +3,8 @@
 import hashlib
 import json
 import logging
-import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any
 
 import numpy as np
 from redis import asyncio as aioredis
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SemanticCache:
     """Semantic cache using embeddings for intelligent response caching."""
 
-    def __init__(self, redis_client: aioredis.Redis, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, redis_client: aioredis.Redis, config: dict[str, Any] | None = None):
         """Initialize semantic cache.
 
         Args:
@@ -33,7 +32,7 @@ class SemanticCache:
         self.embedding_dimension = config.get("embedding_dimension", 1536)
         self.cache_prefix = "semantic_cache:"
 
-    async def _generate_embedding(self, text: str) -> List[float]:
+    async def _generate_embedding(self, text: str) -> list[float]:
         """Generate embedding for text.
 
         Args:
@@ -72,7 +71,7 @@ class SemanticCache:
         similarity = cosine_similarity(vec1, vec2)[0][0]
         return float(similarity)
 
-    async def get(self, query: str) -> Optional[Dict[str, Any]]:
+    async def get(self, query: str) -> dict[str, Any] | None:
         """Get cached response for query.
 
         Args:
@@ -120,7 +119,7 @@ class SemanticCache:
             logger.error(f"Cache get error: {e}")
             return None
 
-    async def set(self, query: str, response: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def set(self, query: str, response: dict[str, Any], ttl: int | None = None) -> bool:
         """Set cache entry.
 
         Args:
@@ -158,7 +157,7 @@ class SemanticCache:
             logger.error(f"Cache set error: {e}")
             return False
 
-    async def invalidate(self, pattern: Optional[str] = None) -> int:
+    async def invalidate(self, pattern: str | None = None) -> int:
         """Invalidate cache entries.
 
         Args:
@@ -201,7 +200,7 @@ class SemanticCache:
             return -1
 
     async def set_batch(
-        self, items: List[Tuple[str, Dict[str, Any]]], ttl: Optional[int] = None
+        self, items: list[tuple[str, dict[str, Any]]], ttl: int | None = None
     ) -> int:
         """Set multiple cache entries.
 
@@ -220,7 +219,7 @@ class SemanticCache:
 
         return success_count
 
-    async def warmup(self, data: List[Dict[str, Any]]) -> int:
+    async def warmup(self, data: list[dict[str, Any]]) -> int:
         """Warmup cache with predefined data.
 
         Args:
@@ -242,7 +241,7 @@ class SemanticCache:
         logger.info(f"Warmed {warmed} cache entries")
         return warmed
 
-    async def get_statistics(self) -> Dict[str, Any]:
+    async def get_statistics(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:

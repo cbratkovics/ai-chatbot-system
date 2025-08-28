@@ -4,26 +4,20 @@ Enterprise-grade metrics collection for business and technical KPIs
 """
 
 import asyncio
-import json
 import logging
-import time
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
-import psutil
-import redis.asyncio as redis
-import asyncpg
-import httpx
-import boto3
-from prometheus_client import start_http_server, Gauge, Counter, Histogram, Summary, Info, Enum as PrometheusEnum
-from prometheus_client.core import CollectorRegistry, REGISTRY
-import pandas as pd
-import numpy as np
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-import openai
+from typing import Any
+
 import anthropic
+import asyncpg
+import boto3
+import numpy as np
+import openai
+import redis.asyncio as redis
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
+from prometheus_client.core import CollectorRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +34,7 @@ class CustomMetric:
     description: str
     category: MetricCategory
     metric_type: str  # "gauge", "counter", "histogram", "summary"
-    labels: List[str]
+    labels: list[str]
     value: float
     timestamp: datetime
 
@@ -49,7 +43,7 @@ class AIModelMetricsExporter:
     Custom exporter for AI model performance and usage metrics
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.registry = CollectorRegistry()
         
@@ -291,7 +285,7 @@ class BusinessMetricsExporter:
     Custom exporter for business KPIs and user engagement metrics
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.registry = CollectorRegistry()
         self.db_pool = None
@@ -593,7 +587,7 @@ class CostMonitoringExporter:
     Custom exporter for cost monitoring and FinOps metrics
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.registry = CollectorRegistry()
         
@@ -714,8 +708,6 @@ class CostMonitoringExporter:
             )
             
             for result in response['ResultsByTime']:
-                date = result['TimePeriod']['Start']
-                
                 for group in result['Groups']:
                     service = group['Keys'][0]
                     region = group['Keys'][1]
@@ -782,7 +774,7 @@ class CostMonitoringExporter:
                 ('AWS/ElastiCache', 'CPUUtilization', 'CacheClusterId')
             ]
             
-            for namespace, metric_name, dimension_name in metrics_to_collect:
+            for namespace, metric_name, _dimension_name in metrics_to_collect:
                 response = self.cloudwatch.get_metric_statistics(
                     Namespace=namespace,
                     MetricName=metric_name,
@@ -809,7 +801,7 @@ class ObservabilityManager:
     Main manager for all custom exporters and observability components
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.exporters = {}
         

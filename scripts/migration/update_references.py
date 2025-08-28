@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Update all file references after reorganization"""
 
-import os
 import re
 from pathlib import Path
+
 
 class ReferenceUpdater:
     def __init__(self):
@@ -56,7 +56,7 @@ class ReferenceUpdater:
             return False
             
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding='utf-8') as f:
                 content = f.read()
             
             original = content
@@ -77,7 +77,7 @@ class ReferenceUpdater:
                 self.updated_files.append(str(filepath))
                 return True
                 
-        except (UnicodeDecodeError, PermissionError) as e:
+        except (UnicodeDecodeError, PermissionError):
             # Skip binary files and files without permission
             pass
         except Exception as e:

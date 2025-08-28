@@ -4,28 +4,22 @@ Enterprise-grade DR procedures with automated backup, replication, and recovery
 """
 
 import asyncio
-import json
+import hashlib
 import logging
-import time
-import uuid
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
-from enum import Enum
 import os
 import subprocess
-import tempfile
-import boto3
-import psycopg2
-import redis
-import kubernetes
-from kubernetes import client, config
-import yaml
 import tarfile
-import hashlib
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import tempfile
+import time
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import Enum
+from typing import Any
+
+import boto3
 import requests
-from pathlib import Path
+from kubernetes import client
 
 logger = logging.getLogger(__name__)
 
@@ -67,14 +61,14 @@ class RecoveryPlan:
     plan_id: str
     name: str
     description: str
-    disaster_types: List[DisasterType]
+    disaster_types: list[DisasterType]
     rto_minutes: int
     rpo_minutes: int
     priority: int
     automated: bool
     runbook_url: str
-    recovery_steps: List[Dict[str, Any]]
-    validation_checks: List[Dict[str, Any]]
+    recovery_steps: list[dict[str, Any]]
+    validation_checks: list[dict[str, Any]]
 
 @dataclass
 class DisasterEvent:
@@ -82,17 +76,17 @@ class DisasterEvent:
     disaster_type: DisasterType
     severity: str
     description: str
-    affected_regions: List[str]
-    affected_services: List[str]
+    affected_regions: list[str]
+    affected_services: list[str]
     detected_at: datetime
-    recovery_plan_id: Optional[str] = None
-    estimated_rto: Optional[int] = None
-    estimated_rpo: Optional[int] = None
+    recovery_plan_id: str | None = None
+    estimated_rto: int | None = None
+    estimated_rpo: int | None = None
 
 class BackupManager:
     """Comprehensive backup management system"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.s3_client = boto3.client('s3')
         self.rds_client = boto3.client('rds')
@@ -100,7 +94,7 @@ class BackupManager:
         self.backup_bucket = config['backup_bucket']
         self.encryption_key_id = config.get('kms_key_id')
         
-    async def create_database_backup(self, database_config: Dict[str, Any]) -> BackupMetadata:
+    async def create_database_backup(self, database_config: dict[str, Any]) -> BackupMetadata:
         """Create database backup with compression and encryption"""
         try:
             backup_id = f"db-backup-{int(time.time())}-{uuid.uuid4().hex[:8]}"
@@ -181,7 +175,7 @@ class BackupManager:
                     destination=f"s3://{self.backup_bucket}/{s3_key}",
                     size_bytes=file_size,
                     checksum=checksum,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     retention_until=retention_until,
                     encryption_key_id=self.encryption_key_id,
                     compression_ratio=0.7  # Estimated compression ratio
@@ -240,7 +234,7 @@ class BackupManager:
                     destination=f"s3://{self.backup_bucket}/{s3_key}",
                     size_bytes=file_size,
                     checksum=checksum,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     retention_until=datetime.now() + timedelta(days=30),
                     encryption_key_id=self.encryption_key_id,
                     compression_ratio=0.6
@@ -260,7 +254,7 @@ class BackupManager:
             snapshot_id = f"{db_identifier}-{backup_id}"
             
             # Create RDS snapshot
-            response = self.rds_client.create_db_snapshot(
+            self.rds_client.create_db_snapshot(
                 DBSnapshotIdentifier=snapshot_id,
                 DBInstanceIdentifier=db_identifier,
                 Tags=[
@@ -290,7 +284,7 @@ class BackupManager:
                 destination=snapshot['DBSnapshotArn'],
                 size_bytes=snapshot.get('AllocatedStorage', 0) * 1024 * 1024 * 1024,  # Convert GB to bytes
                 checksum="",  # RDS handles integrity
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 retention_until=datetime.now() + timedelta(days=7),
                 encryption_key_id=snapshot.get('KmsKeyId', ''),
                 compression_ratio=1.0
@@ -314,12 +308,12 @@ class BackupManager:
 class ReplicationManager:
     """Cross-region replication management"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.primary_region = config['primary_region']
         self.replica_regions = config['replica_regions']
         
-    async def setup_database_replication(self, database_config: Dict[str, Any]) -> Dict[str, Any]:
+    async def setup_database_replication(self, database_config: dict[str, Any]) -> dict[str, Any]:
         """Setup cross-region database replication"""
         try:
             replication_info = {}
@@ -357,7 +351,7 @@ class ReplicationManager:
             logger.error(f"Database replication setup failed: {e}")
             raise
             
-    async def setup_s3_cross_region_replication(self, bucket_name: str) -> Dict[str, Any]:
+    async def setup_s3_cross_region_replication(self, bucket_name: str) -> dict[str, Any]:
         """Setup S3 cross-region replication"""
         try:
             s3_client = boto3.client('s3')
@@ -423,7 +417,7 @@ class ReplicationManager:
 class RecoveryOrchestrator:
     """Disaster recovery orchestration and automation"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.backup_manager = BackupManager(config)
         self.replication_manager = ReplicationManager(config)
@@ -431,7 +425,7 @@ class RecoveryOrchestrator:
         # Load Kubernetes config
         try:
             config.load_incluster_config()
-        except:
+        except Exception:
             config.load_kube_config()
         
         self.k8s_client = client.ApiClient()
@@ -441,7 +435,7 @@ class RecoveryOrchestrator:
         # Recovery plans
         self.recovery_plans = self._load_recovery_plans()
         
-    def _load_recovery_plans(self) -> Dict[str, RecoveryPlan]:
+    def _load_recovery_plans(self) -> dict[str, RecoveryPlan]:
         """Load disaster recovery plans"""
         plans = {}
         
@@ -544,7 +538,7 @@ class RecoveryOrchestrator:
         
         return plans
         
-    async def execute_recovery_plan(self, disaster_event: DisasterEvent) -> Dict[str, Any]:
+    async def execute_recovery_plan(self, disaster_event: DisasterEvent) -> dict[str, Any]:
         """Execute appropriate recovery plan for disaster event"""
         try:
             # Find matching recovery plan
@@ -562,7 +556,7 @@ class RecoveryOrchestrator:
             execution_log = {
                 'plan_id': recovery_plan.plan_id,
                 'disaster_event_id': disaster_event.event_id,
-                'started_at': datetime.now(timezone.utc).isoformat(),
+                'started_at': datetime.now(UTC).isoformat(),
                 'steps': []
             }
             
@@ -583,7 +577,7 @@ class RecoveryOrchestrator:
                 validation_results = await self._run_validation_checks(recovery_plan.validation_checks)
                 execution_log['validation_results'] = validation_results
                 
-            execution_log['completed_at'] = datetime.now(timezone.utc).isoformat()
+            execution_log['completed_at'] = datetime.now(UTC).isoformat()
             
             logger.info(f"Recovery plan execution completed: {execution_log['status']}")
             return execution_log
@@ -592,7 +586,7 @@ class RecoveryOrchestrator:
             logger.error(f"Recovery plan execution failed: {e}")
             raise
             
-    async def _execute_recovery_step(self, step_config: Dict[str, Any], disaster_event: DisasterEvent) -> Dict[str, Any]:
+    async def _execute_recovery_step(self, step_config: dict[str, Any], disaster_event: DisasterEvent) -> dict[str, Any]:
         """Execute individual recovery step"""
         step_name = step_config['step']
         start_time = time.time()
@@ -633,7 +627,7 @@ class RecoveryOrchestrator:
                 'error': str(e)
             }
             
-    async def _validate_secondary_region(self, affected_regions: List[str]) -> Dict[str, Any]:
+    async def _validate_secondary_region(self, affected_regions: list[str]) -> dict[str, Any]:
         """Validate secondary region availability"""
         secondary_region = self._get_secondary_region(affected_regions)
         
@@ -648,7 +642,7 @@ class RecoveryOrchestrator:
             'health_status': health_checks
         }
         
-    async def _failover_database(self) -> Dict[str, Any]:
+    async def _failover_database(self) -> dict[str, Any]:
         """Promote read replica to primary database"""
         try:
             # Get read replica information
@@ -658,7 +652,7 @@ class RecoveryOrchestrator:
             rds_client = boto3.client('rds', region_name=replica_region)
             
             # Promote read replica
-            response = rds_client.promote_read_replica(
+            rds_client.promote_read_replica(
                 DBInstanceIdentifier=replica_identifier
             )
             
@@ -685,7 +679,7 @@ class RecoveryOrchestrator:
             logger.error(f"Database failover failed: {e}")
             raise
             
-    async def _update_dns_failover(self) -> Dict[str, Any]:
+    async def _update_dns_failover(self) -> dict[str, Any]:
         """Update DNS records for failover"""
         try:
             route53_client = boto3.client('route53')
@@ -726,7 +720,7 @@ class RecoveryOrchestrator:
             logger.error(f"DNS failover failed: {e}")
             raise
             
-    async def _restart_applications(self) -> Dict[str, Any]:
+    async def _restart_applications(self) -> dict[str, Any]:
         """Restart application services in Kubernetes"""
         try:
             namespace = self.config.get('kubernetes_namespace', 'default')
@@ -740,7 +734,7 @@ class RecoveryOrchestrator:
                 deployment_name = deployment.metadata.name
                 
                 # Restart deployment by updating annotation
-                now = datetime.now(timezone.utc).isoformat()
+                now = datetime.now(UTC).isoformat()
                 
                 # Update deployment to trigger restart
                 deployment.spec.template.metadata.annotations = deployment.spec.template.metadata.annotations or {}
@@ -768,7 +762,7 @@ class RecoveryOrchestrator:
             logger.error(f"Application restart failed: {e}")
             raise
             
-    async def _restore_from_backup(self) -> Dict[str, Any]:
+    async def _restore_from_backup(self) -> dict[str, Any]:
         """Restore database from latest backup"""
         try:
             # Find latest backup
@@ -789,7 +783,7 @@ class RecoveryOrchestrator:
             return {
                 'backup_id': backup_metadata.backup_id,
                 'backup_created_at': backup_metadata.created_at.isoformat(),
-                'restore_completed_at': datetime.now(timezone.utc).isoformat(),
+                'restore_completed_at': datetime.now(UTC).isoformat(),
                 'restore_result': restore_result
             }
             
@@ -797,7 +791,7 @@ class RecoveryOrchestrator:
             logger.error(f"Database restore failed: {e}")
             raise
             
-    async def _run_validation_checks(self, validation_checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def _run_validation_checks(self, validation_checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Run validation checks after recovery"""
         results = []
         
@@ -827,7 +821,7 @@ class RecoveryOrchestrator:
                 
         return results
         
-    async def _run_health_check(self, check_config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _run_health_check(self, check_config: dict[str, Any]) -> dict[str, Any]:
         """Run HTTP health check"""
         endpoint = check_config['endpoint']
         expected_status = check_config['expected_status']
@@ -840,14 +834,14 @@ class RecoveryOrchestrator:
             'response_time': response.elapsed.total_seconds()
         }
         
-    def _get_secondary_region(self, affected_regions: List[str]) -> str:
+    def _get_secondary_region(self, affected_regions: list[str]) -> str:
         """Get appropriate secondary region for failover"""
         for region in self.replication_manager.replica_regions:
             if region not in affected_regions:
                 return region
         raise Exception("No healthy secondary region available")
         
-    async def _check_region_health(self, region: str) -> Dict[str, Any]:
+    async def _check_region_health(self, region: str) -> dict[str, Any]:
         """Check health of services in a region"""
         # This would implement actual health checks
         # For now, return a mock response
@@ -860,11 +854,11 @@ class RecoveryOrchestrator:
 class ChaosEngineeringTester:
     """Chaos engineering tests for disaster recovery validation"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.recovery_orchestrator = RecoveryOrchestrator(config)
         
-    async def run_disaster_simulation(self, disaster_type: DisasterType, scope: str = 'test') -> Dict[str, Any]:
+    async def run_disaster_simulation(self, disaster_type: DisasterType, scope: str = 'test') -> dict[str, Any]:
         """Run controlled disaster simulation"""
         try:
             simulation_id = f"chaos-{disaster_type.value}-{int(time.time())}"
@@ -879,7 +873,7 @@ class ChaosEngineeringTester:
                 description=f'Simulated {disaster_type.value} for testing',
                 affected_regions=['us-east-1'] if scope == 'test' else ['us-east-1', 'us-west-2'],
                 affected_services=['chatbot-api', 'database'],
-                detected_at=datetime.now(timezone.utc)
+                detected_at=datetime.now(UTC)
             )
             
             # Record baseline metrics
@@ -926,7 +920,7 @@ class ChaosEngineeringTester:
             logger.error(f"Disaster simulation failed: {e}")
             raise
             
-    async def _inject_failure(self, disaster_type: DisasterType, scope: str) -> Dict[str, Any]:
+    async def _inject_failure(self, disaster_type: DisasterType, scope: str) -> dict[str, Any]:
         """Inject controlled failure"""
         if disaster_type == DisasterType.APPLICATION_FAILURE:
             return await self._inject_application_failure(scope)
@@ -937,7 +931,7 @@ class ChaosEngineeringTester:
         else:
             raise Exception(f"Unsupported disaster type for simulation: {disaster_type}")
             
-    async def _inject_application_failure(self, scope: str) -> Dict[str, Any]:
+    async def _inject_application_failure(self, scope: str) -> dict[str, Any]:
         """Inject application failure"""
         # Scale down deployment to simulate failure
         namespace = 'test' if scope == 'test' else 'production'
@@ -969,7 +963,7 @@ class ChaosEngineeringTester:
             'action': 'scaled_down'
         }
         
-    async def _cleanup_failure_injection(self, failure_injection: Dict[str, Any]) -> None:
+    async def _cleanup_failure_injection(self, failure_injection: dict[str, Any]) -> None:
         """Clean up failure injection"""
         if failure_injection['type'] == 'application_failure':
             # Restore original replica count
@@ -987,19 +981,19 @@ class ChaosEngineeringTester:
                 body=deployment
             )
             
-    async def _collect_baseline_metrics(self) -> Dict[str, Any]:
+    async def _collect_baseline_metrics(self) -> dict[str, Any]:
         """Collect baseline system metrics"""
         return {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'application_healthy': True,  # Would check actual health
             'database_responsive': True,  # Would check actual DB
             'response_time_ms': 150,      # Would measure actual response time
             'error_rate': 0.01           # Would calculate actual error rate
         }
         
-    def _calculate_recovery_metrics(self, baseline: Dict[str, Any], post_recovery: Dict[str, Any], disaster_time: datetime) -> Dict[str, Any]:
+    def _calculate_recovery_metrics(self, baseline: dict[str, Any], post_recovery: dict[str, Any], disaster_time: datetime) -> dict[str, Any]:
         """Calculate recovery time and point objectives"""
-        recovery_time = datetime.now(timezone.utc) - disaster_time
+        recovery_time = datetime.now(UTC) - disaster_time
         
         return {
             'actual_rto_minutes': recovery_time.total_seconds() / 60,
@@ -1011,7 +1005,7 @@ class ChaosEngineeringTester:
 class DisasterRecoveryManager:
     """Main disaster recovery management system"""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.backup_manager = BackupManager(config)
         self.replication_manager = ReplicationManager(config)
@@ -1083,7 +1077,7 @@ class DisasterRecoveryManager:
             except Exception as e:
                 logger.error(f"Periodic test error: {e}")
                 
-    def _should_run_backup(self, config: Dict[str, Any], backup_type: str) -> bool:
+    def _should_run_backup(self, config: dict[str, Any], backup_type: str) -> bool:
         """Determine if backup should run based on schedule"""
         # Implement backup scheduling logic
         return True  # Simplified for demo

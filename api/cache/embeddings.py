@@ -3,7 +3,6 @@
 import hashlib
 import logging
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -81,7 +80,7 @@ class EmbeddingGenerator:
 
         return embedding
 
-    async def generate_batch(self, texts: List[str]) -> List[Embedding]:
+    async def generate_batch(self, texts: list[str]) -> list[Embedding]:
         """Generate embeddings for multiple texts."""
         embeddings = []
         for text in texts:
@@ -124,11 +123,11 @@ class SimilarityCalculator:
     def find_most_similar(
         self,
         query_embedding: Embedding,
-        candidate_embeddings: List[Embedding],
+        candidate_embeddings: list[Embedding],
         threshold: float = 0.85,
         top_k: int = 5,
         metric: str = "cosine",
-    ) -> List[Tuple[Embedding, float]]:
+    ) -> list[tuple[Embedding, float]]:
         """Find most similar embeddings to query."""
         if not candidate_embeddings:
             return []
@@ -186,7 +185,7 @@ class SimilarityCalculator:
     def batch_similarity(
         self,
         query_embedding: Embedding,
-        candidate_embeddings: List[Embedding],
+        candidate_embeddings: list[Embedding],
         metric: str = "cosine",
     ) -> np.ndarray:
         """Calculate similarity scores for batch of candidates."""

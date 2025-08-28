@@ -1,9 +1,8 @@
 """Multi-tenant middleware with JWT context injection and quota validation."""
 
-import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -79,7 +78,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 content={"error": "Internal server error"},
             )
 
-    async def _extract_tenant_context(self, request: Request) -> Optional[Dict[str, Any]]:
+    async def _extract_tenant_context(self, request: Request) -> dict[str, Any] | None:
         """Extract tenant context from JWT claims.
 
         Args:
@@ -126,7 +125,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             logger.error(f"Failed to extract tenant context: {e}")
             return None
 
-    async def _validate_quota(self, tenant_id: str, endpoint: str, tier: str) -> Dict[str, Any]:
+    async def _validate_quota(self, tenant_id: str, endpoint: str, tier: str) -> dict[str, Any]:
         """Validate tenant quotas before processing request.
 
         Args:
@@ -208,7 +207,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Failed to track request: {e}")
 
-    def _get_tier_limits(self, tier: str) -> Dict[str, int]:
+    def _get_tier_limits(self, tier: str) -> dict[str, int]:
         """Get rate limits for tenant tier.
 
         Args:
@@ -245,7 +244,7 @@ class TenantContextManager:
     """Manager for tenant-specific context and preferences."""
 
     @staticmethod
-    def get_model_preferences(tenant_context: Dict[str, Any]) -> Dict[str, Any]:
+    def get_model_preferences(tenant_context: dict[str, Any]) -> dict[str, Any]:
         """Get tenant-specific model preferences.
 
         Args:
@@ -315,7 +314,7 @@ class TenantContextManager:
         return tenant_tier in allowed_tiers
 
     @staticmethod
-    async def get_tenant_usage_stats(tenant_id: str, period: str = "today") -> Dict[str, Any]:
+    async def get_tenant_usage_stats(tenant_id: str, period: str = "today") -> dict[str, Any]:
         """Get tenant usage statistics.
 
         Args:

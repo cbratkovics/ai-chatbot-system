@@ -3,8 +3,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class Invoice:
     # Status
     status: str  # draft, pending, paid, overdue
     due_date: datetime
-    paid_date: Optional[datetime] = None
+    paid_date: datetime | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -90,8 +89,8 @@ class BillingManager:
     }
 
     def __init__(self):
-        self.invoices: Dict[str, Invoice] = {}
-        self.tenant_tiers: Dict[str, str] = {}  # tenant_id -> tier
+        self.invoices: dict[str, Invoice] = {}
+        self.tenant_tiers: dict[str, str] = {}  # tenant_id -> tier
         logger.info("Billing manager initialized")
 
     def set_tenant_tier(self, tenant_id: str, tier: str):
@@ -103,7 +102,7 @@ class BillingManager:
         logger.info(f"Set tenant {tenant_id} to {tier} tier")
 
     def generate_invoice(
-        self, tenant_id: str, period_start: datetime, period_end: datetime, usage_summary: Dict
+        self, tenant_id: str, period_start: datetime, period_end: datetime, usage_summary: dict
     ) -> Invoice:
         """Generate invoice for tenant."""
 
@@ -168,11 +167,11 @@ class BillingManager:
 
         return invoice
 
-    def get_invoice(self, invoice_id: str) -> Optional[Invoice]:
+    def get_invoice(self, invoice_id: str) -> Invoice | None:
         """Get invoice by ID."""
         return self.invoices.get(invoice_id)
 
-    def get_tenant_invoices(self, tenant_id: str) -> List[Invoice]:
+    def get_tenant_invoices(self, tenant_id: str) -> list[Invoice]:
         """Get all invoices for a tenant."""
         return [invoice for invoice in self.invoices.values() if invoice.tenant_id == tenant_id]
 
@@ -184,7 +183,7 @@ class BillingManager:
             invoice.paid_date = datetime.now()
             logger.info(f"Invoice {invoice_id} marked as paid")
 
-    def get_billing_summary(self, tenant_id: str) -> Dict:
+    def get_billing_summary(self, tenant_id: str) -> dict:
         """Get billing summary for tenant."""
 
         tier = self.tenant_tiers.get(tenant_id, "free")
@@ -218,7 +217,7 @@ class BillingManager:
             ],
         }
 
-    def estimate_monthly_cost(self, tenant_id: str, daily_requests: int, daily_tokens: int) -> Dict:
+    def estimate_monthly_cost(self, tenant_id: str, daily_requests: int, daily_tokens: int) -> dict:
         """Estimate monthly cost based on usage."""
 
         tier = self.tenant_tiers.get(tenant_id, "free")

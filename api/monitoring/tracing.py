@@ -1,7 +1,6 @@
 """Distributed tracing with OpenTelemetry."""
 
 import logging
-from typing import Optional
 
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger import JaegerExporter

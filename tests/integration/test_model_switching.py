@@ -1,9 +1,7 @@
 """Integration tests for model switching."""
 
 import asyncio
-import json
-from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 

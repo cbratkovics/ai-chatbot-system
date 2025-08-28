@@ -2,8 +2,8 @@
 
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class TenantManager:
     """Manages tenant isolation and operations."""
 
-    def __init__(self, db: AsyncSession, cache_client: Optional[Any] = None):
+    def __init__(self, db: AsyncSession, cache_client: Any | None = None):
         """Initialize tenant manager.
 
         Args:
@@ -24,7 +24,7 @@ class TenantManager:
         self.cache_client = cache_client
         self.tenants_cache = {}
 
-    async def create_tenant(self, tenant_config: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_tenant(self, tenant_config: dict[str, Any]) -> dict[str, Any]:
         """Create new tenant.
 
         Args:
@@ -66,7 +66,7 @@ class TenantManager:
             await self.db.rollback()
             raise
 
-    async def get_tenant(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+    async def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
         """Get tenant by ID.
 
         Args:
@@ -105,7 +105,7 @@ class TenantManager:
             logger.error(f"Failed to get tenant: {e}")
             return None
 
-    async def update_tenant(self, tenant_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    async def update_tenant(self, tenant_id: str, updates: dict[str, Any]) -> dict[str, Any]:
         """Update tenant configuration.
 
         Args:
@@ -190,7 +190,7 @@ class TenantManager:
             logger.error(f"Failed to get tenant data: {e}")
             return None
 
-    async def check_quota(self, tenant_id: str, resource: str, requested: int) -> Dict[str, Any]:
+    async def check_quota(self, tenant_id: str, resource: str, requested: int) -> dict[str, Any]:
         """Check tenant quota.
 
         Args:
@@ -264,7 +264,7 @@ class TenantManager:
 
     async def calculate_billing(
         self, tenant_id: str, start_date: datetime, end_date: datetime
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Calculate tenant billing.
 
         Args:
@@ -315,7 +315,7 @@ class TenantManager:
             logger.error(f"Failed to calculate billing: {e}")
             return {}
 
-    async def migrate_tenant(self, tenant_id: str, from_tier: str, to_tier: str) -> Dict[str, Any]:
+    async def migrate_tenant(self, tenant_id: str, from_tier: str, to_tier: str) -> dict[str, Any]:
         """Migrate tenant between tiers.
 
         Args:
@@ -356,7 +356,7 @@ class TenantManager:
         """
         return f"{base_query} WHERE tenant_id = '{tenant_id}'"
 
-    async def backup_tenant_data(self, tenant_id: str) -> Dict[str, Any]:
+    async def backup_tenant_data(self, tenant_id: str) -> dict[str, Any]:
         """Backup tenant data.
 
         Args:
@@ -375,7 +375,7 @@ class TenantManager:
 
         return backup
 
-    async def restore_tenant_data(self, backup_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def restore_tenant_data(self, backup_data: dict[str, Any]) -> dict[str, Any]:
         """Restore tenant data from backup.
 
         Args:
@@ -388,7 +388,7 @@ class TenantManager:
             tenant_id = backup_data["tenant_id"]
             data = backup_data["data"]
 
-            for resource, items in data.items():
+            for _resource, items in data.items():
                 for item in items:
                     self.db.add(item)
 
@@ -432,7 +432,7 @@ class TenantManager:
             logger.error(f"Failed to get usage: {e}")
             return 0
 
-    def _get_tier_pricing(self, tier: str) -> Dict[str, float]:
+    def _get_tier_pricing(self, tier: str) -> dict[str, float]:
         """Get pricing for tier.
 
         Args:

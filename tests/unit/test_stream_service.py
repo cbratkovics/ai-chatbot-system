@@ -1,8 +1,6 @@
 """Unit tests for streaming service."""
 
 import asyncio
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -227,7 +225,7 @@ class TestStreamHandler:
 
         async def data_generator():
             for i in range(5):
-                yield f"Repetitive data " * 10
+                yield "Repetitive data " * 10
 
         compressed_stream = handler.compress_stream(data_generator())
         chunks = []

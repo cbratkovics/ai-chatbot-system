@@ -5,10 +5,11 @@ import hashlib
 import logging
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +40,10 @@ class ProviderInstance:
     total_requests: int = 0
     total_errors: int = 0
     avg_response_time_ms: float = 0
-    last_error_time: Optional[datetime] = None
+    last_error_time: datetime | None = None
     health_score: float = 1.0
     available: bool = True
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
 
 
 class LoadBalancer:
@@ -57,7 +58,7 @@ class LoadBalancer:
             strategy: Load balancing strategy
         """
         self.strategy = strategy
-        self.instances: Dict[str, ProviderInstance] = {}
+        self.instances: dict[str, ProviderInstance] = {}
         self.round_robin_index = 0
         self.consistent_hash_ring = {}
         self.health_check_interval = 30  # seconds
@@ -92,8 +93,8 @@ class LoadBalancer:
             logger.info(f"Removed instance {instance_id} from load balancer")
 
     async def select_instance(
-        self, request_key: Optional[str] = None, required_model: Optional[str] = None
-    ) -> Optional[ProviderInstance]:
+        self, request_key: str | None = None, required_model: str | None = None
+    ) -> ProviderInstance | None:
         """Select instance based on strategy.
 
         Args:
@@ -135,13 +136,13 @@ class LoadBalancer:
         else:
             return available[0]
 
-    def _select_round_robin(self, instances: List[ProviderInstance]) -> ProviderInstance:
+    def _select_round_robin(self, instances: list[ProviderInstance]) -> ProviderInstance:
         """Select using round-robin."""
         selected = instances[self.round_robin_index % len(instances)]
         self.round_robin_index += 1
         return selected
 
-    def _select_weighted_round_robin(self, instances: List[ProviderInstance]) -> ProviderInstance:
+    def _select_weighted_round_robin(self, instances: list[ProviderInstance]) -> ProviderInstance:
         """Select using weighted round-robin."""
         # Build weighted list
         weighted_list = []
@@ -155,20 +156,20 @@ class LoadBalancer:
         self.round_robin_index += 1
         return selected
 
-    def _select_least_connections(self, instances: List[ProviderInstance]) -> ProviderInstance:
+    def _select_least_connections(self, instances: list[ProviderInstance]) -> ProviderInstance:
         """Select instance with least connections."""
         return min(instances, key=lambda x: x.current_connections)
 
-    def _select_least_response_time(self, instances: List[ProviderInstance]) -> ProviderInstance:
+    def _select_least_response_time(self, instances: list[ProviderInstance]) -> ProviderInstance:
         """Select instance with least response time."""
         return min(instances, key=lambda x: x.avg_response_time_ms)
 
-    def _select_random(self, instances: List[ProviderInstance]) -> ProviderInstance:
+    def _select_random(self, instances: list[ProviderInstance]) -> ProviderInstance:
         """Select random instance."""
         return random.choice(instances)
 
     def _select_consistent_hash(
-        self, instances: List[ProviderInstance], request_key: Optional[str]
+        self, instances: list[ProviderInstance], request_key: str | None
     ) -> ProviderInstance:
         """Select using consistent hashing."""
         if not request_key:
@@ -186,7 +187,7 @@ class LoadBalancer:
         # Wrap around to first instance
         return self.consistent_hash_ring[sorted_hashes[0]] if sorted_hashes else instances[0]
 
-    def _select_adaptive(self, instances: List[ProviderInstance]) -> ProviderInstance:
+    def _select_adaptive(self, instances: list[ProviderInstance]) -> ProviderInstance:
         """Select using adaptive scoring."""
         # Score each instance
         scored_instances = []
@@ -401,7 +402,7 @@ class LoadBalancer:
             instance.available = False
             instance.health_score = max(0.1, instance.health_score * 0.5)
 
-    def get_instance_stats(self, instance_id: str) -> Optional[Dict[str, Any]]:
+    def get_instance_stats(self, instance_id: str) -> dict[str, Any] | None:
         """Get statistics for instance.
 
         Args:
@@ -432,7 +433,7 @@ class LoadBalancer:
             else None,
         }
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get overall load balancer statistics.
 
         Returns:

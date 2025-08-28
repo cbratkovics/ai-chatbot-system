@@ -1,6 +1,5 @@
 """Unit tests for model factory and providers."""
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

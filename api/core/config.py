@@ -1,5 +1,4 @@
 """Application configuration management."""
-from typing import List, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -32,7 +31,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
     JWT_ISSUER: str = Field(default="ai-chatbot-system")
     JWT_AUDIENCE: str = Field(default="ai-chatbot-api")
-    ALLOWED_ORIGINS: List[str] = Field(default=["*"])
+    ALLOWED_ORIGINS: list[str] = Field(default=["*"])
 
     # CORS Configuration
     CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8080")
@@ -54,7 +53,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
-    REDIS_PASSWORD: Optional[str] = Field(default=None)
+    REDIS_PASSWORD: str | None = Field(default=None)
     REDIS_MAX_CONNECTIONS: int = Field(default=100)
     REDIS_SOCKET_TIMEOUT: int = Field(default=5)
     REDIS_SOCKET_CONNECT_TIMEOUT: int = Field(default=5)

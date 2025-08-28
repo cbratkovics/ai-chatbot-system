@@ -2,9 +2,9 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Query
 
@@ -79,8 +79,8 @@ class IsolationManager:
             return False
 
     async def create_tenant_namespace(
-        self, tenant_id: str, namespace_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, tenant_id: str, namespace_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Create isolated namespace for tenant.
 
         Args:
@@ -122,7 +122,7 @@ class IsolationManager:
             raise
 
     async def enforce_row_level_security(
-        self, tenant_id: str, operation: str, table: str, data: Dict[str, Any]
+        self, tenant_id: str, operation: str, table: str, data: dict[str, Any]
     ) -> bool:
         """Enforce row-level security policies.
 
@@ -156,7 +156,7 @@ class IsolationManager:
         )
         return False
 
-    async def get_tenant_boundaries(self, tenant_id: str) -> Dict[str, Any]:
+    async def get_tenant_boundaries(self, tenant_id: str) -> dict[str, Any]:
         """Get data boundaries for tenant.
 
         Args:
@@ -211,7 +211,7 @@ class IsolationManager:
 
     async def check_boundary_limits(
         self, tenant_id: str, resource_type: str, current_count: int = 0, requested: int = 1
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if operation exceeds tenant boundaries.
 
         Args:
@@ -266,7 +266,7 @@ class IsolationManager:
         action: str,
         resource: str,
         result: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ):
         """Audit tenant data access for compliance.
 
@@ -306,7 +306,7 @@ class IsolationManager:
 
     async def migrate_tenant_data(
         self, tenant_id: str, source_namespace: str, target_namespace: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Migrate tenant data between namespaces.
 
         Args:
@@ -359,7 +359,7 @@ class CrossTenantValidator:
 
     @staticmethod
     async def validate_sharing(
-        source_tenant: str, target_tenant: str, resource_type: str, permissions: List[str]
+        source_tenant: str, target_tenant: str, resource_type: str, permissions: list[str]
     ) -> bool:
         """Validate cross-tenant sharing request.
 
@@ -392,8 +392,8 @@ class CrossTenantValidator:
         tenant_id: str,
         resource_id: str,
         resource_type: str,
-        permissions: List[str],
-        expires_at: Optional[datetime] = None,
+        permissions: list[str],
+        expires_at: datetime | None = None,
     ) -> str:
         """Create secure sharing link for cross-tenant access.
 
@@ -407,7 +407,6 @@ class CrossTenantValidator:
         Returns:
             Secure sharing token
         """
-        import json
         import secrets
 
         from jose import jwt

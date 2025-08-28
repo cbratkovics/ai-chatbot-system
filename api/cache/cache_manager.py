@@ -2,11 +2,10 @@
 
 import logging
 import time
-from typing import Optional
 from uuid import UUID
 
 from ..providers import CompletionRequest, CompletionResponse, ProviderOrchestrator
-from .semantic_cache import CacheEntry, SemanticCache
+from .semantic_cache import SemanticCache
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +95,7 @@ class CacheManager:
         # Fallback to concatenating all messages
         return " ".join([msg.content for msg in request.messages])
 
-    async def invalidate_cache(self, tenant_id: Optional[UUID] = None):
+    async def invalidate_cache(self, tenant_id: UUID | None = None):
         """Invalidate cache entries."""
         await self.semantic_cache.clear(tenant_id=str(tenant_id) if tenant_id else None)
         logger.info(f"Cache invalidated for tenant: {tenant_id or 'all'}")

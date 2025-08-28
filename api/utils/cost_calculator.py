@@ -1,6 +1,3 @@
-import asyncio
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 from api.models.chat import ChatSession
 
@@ -14,7 +11,7 @@ class CostCalculator:
             "claude-3-sonnet": {"input": 0.003, "output": 0.015, "name": "Claude 3 Sonnet"},
         }
 
-    def calculate_session_cost(self, session: ChatSession) -> Dict:
+    def calculate_session_cost(self, session: ChatSession) -> dict:
         """Calculate total cost for a session"""
         return {
             "total_cost": session.metrics.get("total_cost", 0.0),
@@ -26,7 +23,7 @@ class CostCalculator:
             ),
         }
 
-    def calculate_cost_by_model(self, sessions: List[ChatSession]) -> Dict[str, Dict]:
+    def calculate_cost_by_model(self, sessions: list[ChatSession]) -> dict[str, dict]:
         """Calculate cost breakdown by model across sessions"""
         model_costs = {}
 
@@ -53,7 +50,7 @@ class CostCalculator:
         avg_messages_per_session: int,
         avg_tokens_per_message: int,
         model: str = "gpt-4",
-    ) -> Dict:
+    ) -> dict:
         """Project monthly costs based on usage patterns"""
         if model not in self.pricing:
             return {"error": "Unknown model"}
@@ -86,7 +83,7 @@ class CostCalculator:
             "cost_per_session": round(daily_total_cost / daily_sessions, 4),
         }
 
-    def get_cost_optimization_suggestions(self, session_metrics: Dict) -> List[str]:
+    def get_cost_optimization_suggestions(self, session_metrics: dict) -> list[str]:
         """Provide cost optimization suggestions based on usage"""
         suggestions = []
 

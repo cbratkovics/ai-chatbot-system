@@ -8,9 +8,8 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import aiodns
 import aioredis
 import httpx
 from prometheus_client import Counter, Gauge, Histogram
@@ -61,14 +60,14 @@ class MultiRegionManager:
     Manages multi-region architecture with automatic failover and cross-region replication
     """
 
-    def __init__(self, regions: List[Dict[str, Any]], config: FailoverConfig):
+    def __init__(self, regions: list[dict[str, Any]], config: FailoverConfig):
         self.regions = {region["name"]: Region(**region) for region in regions}
         self.config = config
         self.current_primary = self._get_primary_region()
-        self.redis_connections: Dict[str, aioredis.Redis] = {}
-        self.health_check_failures: Dict[str, int] = {r: 0 for r in self.regions}
-        self._health_check_task: Optional[asyncio.Task] = None
-        self._replication_task: Optional[asyncio.Task] = None
+        self.redis_connections: dict[str, aioredis.Redis] = {}
+        self.health_check_failures: dict[str, int] = {r: 0 for r in self.regions}
+        self._health_check_task: asyncio.Task | None = None
+        self._replication_task: asyncio.Task | None = None
 
     async def initialize(self):
         """Initialize connections to all regions"""
@@ -111,7 +110,7 @@ class MultiRegionManager:
         for redis_conn in self.redis_connections.values():
             await redis_conn.close()
 
-    def _get_primary_region(self) -> Optional[str]:
+    def _get_primary_region(self) -> str | None:
         """Get current primary region"""
         for name, region in self.regions.items():
             if region.is_primary and region.status == RegionStatus.HEALTHY:
@@ -120,7 +119,7 @@ class MultiRegionManager:
         # If no healthy primary, find best alternative
         return self._find_best_region()
 
-    def _find_best_region(self) -> Optional[str]:
+    def _find_best_region(self) -> str | None:
         """Find best available region based on priority and health"""
         healthy_regions = [
             (name, region)
@@ -263,7 +262,7 @@ class MultiRegionManager:
                 self.regions[old_primary].is_primary = True
             self.regions[new_primary].is_primary = False
 
-    async def _migrate_sessions(self, from_region: Optional[str], to_region: str):
+    async def _migrate_sessions(self, from_region: str | None, to_region: str):
         """Migrate active sessions between regions"""
         if not from_region or from_region not in self.redis_connections:
             return
@@ -338,7 +337,7 @@ class MultiRegionManager:
                 logger.error(f"Replication failed for pattern {pattern}: {e}")
 
     async def _replicate_keys(
-        self, source: aioredis.Redis, target: aioredis.Redis, keys: List[str]
+        self, source: aioredis.Redis, target: aioredis.Redis, keys: list[str]
     ):
         """Replicate specific keys from source to target"""
         if not keys:
@@ -360,8 +359,8 @@ class MultiRegionManager:
             logger.error(f"Failed to replicate batch: {e}")
 
     async def get_redis_connection(
-        self, prefer_region: Optional[str] = None
-    ) -> Tuple[str, aioredis.Redis]:
+        self, prefer_region: str | None = None
+    ) -> tuple[str, aioredis.Redis]:
         """Get Redis connection with automatic region selection"""
         region = prefer_region or self.current_primary or self._find_best_region()
 
@@ -371,7 +370,7 @@ class MultiRegionManager:
         region_requests.labels(region=region).inc()
         return region, self.redis_connections[region]
 
-    def get_current_status(self) -> Dict[str, Any]:
+    def get_current_status(self) -> dict[str, Any]:
         """Get current multi-region status"""
         return {
             "current_primary": self.current_primary,

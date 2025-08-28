@@ -1,12 +1,11 @@
 """Semantic cache implementation with Redis backend."""
 
-import asyncio
 import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
-from uuid import UUID, uuid4
+from typing import Any
+from uuid import uuid4
 
 import numpy as np
 import redis.asyncio as redis
@@ -25,12 +24,12 @@ class CacheEntry:
     id: str = field(default_factory=lambda: str(uuid4()))
     query: str = ""
     response: str = ""
-    embedding: Optional[Embedding] = None
+    embedding: Embedding | None = None
 
     # Metadata
     model: str = ""
     temperature: float = 0.7
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     # Statistics
     created_at: float = field(default_factory=time.time)
@@ -41,7 +40,7 @@ class CacheEntry:
     ttl: int = 3600  # 1 hour default
     version: str = "1.0"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "id": self.id,
@@ -59,7 +58,7 @@ class CacheEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CacheEntry":
+    def from_dict(cls, data: dict[str, Any]) -> "CacheEntry":
         """Create from dictionary."""
         embedding = None
         if data.get("embedding"):
@@ -120,7 +119,7 @@ class CacheStats:
         """Calculate cache miss rate."""
         return 1.0 - self.hit_rate
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "total_queries": self.total_queries,
@@ -143,8 +142,8 @@ class SemanticCache:
     def __init__(
         self,
         redis_url: str = None,
-        embedding_generator: Optional[EmbeddingGenerator] = None,
-        similarity_calculator: Optional[SimilarityCalculator] = None,
+        embedding_generator: EmbeddingGenerator | None = None,
+        similarity_calculator: SimilarityCalculator | None = None,
         similarity_threshold: float = 0.85,
         max_entries: int = 10000,
         ttl: int = 3600,
@@ -157,12 +156,12 @@ class SemanticCache:
         self.default_ttl = ttl
 
         # Redis connection
-        self.redis_client: Optional[redis.Redis] = None
-        self.connection_pool: Optional[ConnectionPool] = None
+        self.redis_client: redis.Redis | None = None
+        self.connection_pool: ConnectionPool | None = None
 
         # Local cache for embeddings (LRU-style)
-        self._embedding_cache: Dict[str, CacheEntry] = {}
-        self._cache_order: List[str] = []
+        self._embedding_cache: dict[str, CacheEntry] = {}
+        self._cache_order: list[str] = []
 
         # Statistics
         self.stats = CacheStats()
@@ -190,8 +189,8 @@ class SemanticCache:
             logger.info("Disconnected from Redis")
 
     async def get(
-        self, query: str, model: str = "", temperature: float = 0.7, tenant_id: Optional[str] = None
-    ) -> Optional[CacheEntry]:
+        self, query: str, model: str = "", temperature: float = 0.7, tenant_id: str | None = None
+    ) -> CacheEntry | None:
         """Get cached response for query using semantic similarity."""
         start_time = time.time()
         self.stats.total_queries += 1
@@ -263,8 +262,8 @@ class SemanticCache:
         response: str,
         model: str = "",
         temperature: float = 0.7,
-        tenant_id: Optional[str] = None,
-        ttl: Optional[int] = None,
+        tenant_id: str | None = None,
+        ttl: int | None = None,
     ) -> CacheEntry:
         """Put response in cache with semantic embedding."""
         try:
@@ -298,7 +297,7 @@ class SemanticCache:
             logger.error(f"Error putting in cache: {e}")
             raise
 
-    async def _get_candidates(self, tenant_id: Optional[str], model: str) -> List[CacheEntry]:
+    async def _get_candidates(self, tenant_id: str | None, model: str) -> list[CacheEntry]:
         """Get candidate cache entries for similarity matching."""
         candidates = []
 
@@ -388,7 +387,7 @@ class SemanticCache:
             oldest_id = self._cache_order.pop(0)
             del self._embedding_cache[oldest_id]
 
-    async def clear(self, tenant_id: Optional[str] = None):
+    async def clear(self, tenant_id: str | None = None):
         """Clear cache entries."""
         # Clear local cache
         if tenant_id:
@@ -433,11 +432,11 @@ class SemanticCache:
 
         return self.stats
 
-    async def warmup(self, queries: List[str], responses: List[str], **kwargs):
+    async def warmup(self, queries: list[str], responses: list[str], **kwargs):
         """Warmup cache with predefined queries and responses."""
         logger.info(f"Warming up cache with {len(queries)} entries")
 
-        for query, response in zip(queries, responses):
+        for query, response in zip(queries, responses, strict=False):
             await self.put(query, response, **kwargs)
 
         logger.info("Cache warmup complete")

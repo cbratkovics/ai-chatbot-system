@@ -1,7 +1,6 @@
 """Permission and role management for authorization."""
 
 from enum import Enum
-from typing import List, Set
 
 
 class Permission(str, Enum):
@@ -107,18 +106,18 @@ ROLE_PERMISSIONS = {
 }
 
 
-def get_role_permissions(role: Role) -> Set[Permission]:
+def get_role_permissions(role: Role) -> set[Permission]:
     """Get permissions for a role."""
     return ROLE_PERMISSIONS.get(role, set())
 
 
-def check_permission(user_permissions: List[str], required_permission: Permission) -> bool:
+def check_permission(user_permissions: list[str], required_permission: Permission) -> bool:
     """Check if user has required permission."""
     return required_permission.value in user_permissions
 
 
 def check_any_permission(
-    user_permissions: List[str], required_permissions: List[Permission]
+    user_permissions: list[str], required_permissions: list[Permission]
 ) -> bool:
     """Check if user has any of the required permissions."""
     user_perms_set = set(user_permissions)
@@ -128,7 +127,7 @@ def check_any_permission(
 
 
 def check_all_permissions(
-    user_permissions: List[str], required_permissions: List[Permission]
+    user_permissions: list[str], required_permissions: list[Permission]
 ) -> bool:
     """Check if user has all required permissions."""
     user_perms_set = set(user_permissions)
@@ -137,7 +136,7 @@ def check_all_permissions(
     return required_perms_set.issubset(user_perms_set)
 
 
-def expand_roles_to_permissions(roles: List[str]) -> Set[str]:
+def expand_roles_to_permissions(roles: list[str]) -> set[str]:
     """Expand roles to their associated permissions."""
     permissions = set()
 

@@ -14,19 +14,21 @@ permissions:
   contents: read
 
 env:
-  PYTHON_VERSION: "3.11"
-  POETRY_VERSION: "1.7.1"
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "2.1.4"
 
 jobs:
   quality-checks:
     name: Code Quality and Type Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python
+        id: py
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -36,10 +38,10 @@ jobs:
           pipx install "poetry==${POETRY_VERSION}"
           poetry --version
 
-      - name: Configure Poetry (in-project venv)
+      - name: Configure Poetry (in-project venv; bind to active Python)
         run: |
           poetry config virtualenvs.in-project true
-          poetry env use ${{ steps.setup-python.outputs.python-path || 'python' }}
+          poetry env use "$(python -c 'import sys; print(sys.executable)')"
 
       - name: Cache .venv
         id: cache-venv
@@ -51,22 +53,19 @@ jobs:
             venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
+        run: poetry install --no-interaction --no-ansi --with dev
 
-      - name: Lint and format checks
-        run: |
-          poetry run black --check .
-          poetry run isort --check-only .
-          poetry run flake8 .
+      - name: Lint (Ruff/Black/Isort) — fail on issues
+        run: poetry run task lint
 
-      - name: Type check
-        run: |
-          poetry run mypy backend api
+      - name: Type check (mypy)
+        run: poetry run task typecheck
 
   tests:
     name: Unit and Integration Tests
     runs-on: ubuntu-latest
     needs: quality-checks
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -78,13 +77,12 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Poetry
-        run: |
-          pipx install "poetry==${POETRY_VERSION}"
+        run: pipx install "poetry==${POETRY_VERSION}"
 
-      - name: Configure Poetry (in-project venv)
+      - name: Configure Poetry (in-project venv; bind to active Python)
         run: |
           poetry config virtualenvs.in-project true
-          poetry env use ${{ steps.setup-python.outputs.python-path || 'python' }}
+          poetry env use "$(python -c 'import sys; print(sys.executable)')"
 
       - name: Cache .venv
         uses: actions/cache@v4
@@ -95,12 +93,12 @@ jobs:
             venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-ansi
+        run: poetry install --no-interaction --no-ansi --with dev
 
       - name: Ensure results dir exists
         run: mkdir -p benchmarks/results
 
-      - name: Run tests
+      - name: Run tests (with JUnit)
         run: |
           poetry run pytest -q --maxfail=1 --disable-warnings \
             --junitxml=benchmarks/results/junit_ci.xml
@@ -109,14 +107,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junit-and-logs
-          path: |
-            benchmarks/results/junit_ci.xml
+          path: benchmarks/results/junit_ci.xml
           if-no-files-found: error
 
   performance-tests:
     name: k6 Smoke Tests
     runs-on: ubuntu-latest
     needs: quality-checks
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -133,7 +131,7 @@ jobs:
           k6 run --quiet \
             --summary-export=benchmarks/results/rest_api_smoke.json \
             --vus 5 --duration 30s \
-            benchmarks/load/rest_api_load.js
+            benchmarks/load_tests/k6_api_test.js
         continue-on-error: true
 
       - name: Run k6 Smoke Test (WebSocket)
@@ -141,7 +139,7 @@ jobs:
           k6 run --quiet \
             --summary-export=benchmarks/results/websocket_smoke.json \
             --vus 5 --duration 30s \
-            benchmarks/load/websocket_concurrency.js
+            benchmarks/load_tests/k6_websocket_test.js
         continue-on-error: true
 
       - name: Upload Performance Results
@@ -159,6 +157,7 @@ jobs:
     name: Docker Build Test
     runs-on: ubuntu-latest
     needs: quality-checks
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -167,7 +166,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
+      - name: Build Docker Image (cache only)
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -179,6 +178,7 @@ jobs:
   monitoring-validation:
     name: Validate Monitoring Configs
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -219,22 +219,19 @@ jobs:
 
       - name: Generate Summary Report
         run: |
-          {
-            echo "# CI Pipeline Summary"
-            echo
-            echo "## Completed Checks"
-            echo
-            echo "| Check | Status |"
-            echo "|-------|--------|"
-            echo "| Code Quality | passed |"
-            echo "| Tests | passed |"
-            echo "| Performance | attempted |"
-            echo "| Docker Build | passed |"
-            echo "| Monitoring | attempted |"
-            echo
-            echo "## Artifacts"
-            echo
-            echo "- junit-and-logs"
-            echo "- performance-results"
-            echo "- monitoring-configs"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "# CI Pipeline Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Completed Checks" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Code Quality | ${{ needs.quality-checks.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tests | ${{ needs.tests.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Performance | ${{ needs.performance-tests.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Docker Build | ${{ needs.docker-build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Monitoring | ${{ needs.monitoring-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- junit-and-logs" >> "$GITHUB_STEP_SUMMARY"
+          echo "- performance-results" >> "$GITHUB_STEP_SUMMARY"
+          echo "- monitoring-configs" >> "$GITHUB_STEP_SUMMARY"

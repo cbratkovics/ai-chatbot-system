@@ -1,8 +1,7 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
-from api.models.chat import Message
 from api.services.llm.orchestrator import LLMOrchestrator
 
 

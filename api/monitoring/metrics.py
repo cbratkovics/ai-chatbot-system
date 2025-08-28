@@ -1,7 +1,5 @@
 """Prometheus metrics collection."""
 
-import time
-from typing import Dict, Optional
 
 from fastapi import Response
 from prometheus_client import (
@@ -9,11 +7,8 @@ from prometheus_client import (
     Counter,
     Gauge,
     Histogram,
-    Summary,
     generate_latest,
 )
-
-from ..app.config import settings
 
 
 class MetricsCollector:
@@ -58,7 +53,6 @@ class MetricsCollector:
         self.provider_tokens_total = Counter(
             "provider_tokens_total",
             "Total tokens processed",
-            ["provider", "model", "type"],  # type: prompt/completion
         )
 
         self.provider_cost_total = Counter(
@@ -148,7 +142,7 @@ class MetricsCollector:
             if cost_cents > 0:
                 self.provider_cost_total.labels(provider=provider, model=model).inc(cost_cents)
 
-    def record_cache_access(self, hit: bool, tenant: Optional[str] = None):
+    def record_cache_access(self, hit: bool, tenant: str | None = None):
         """Record cache access."""
         tenant = tenant or "global"
 

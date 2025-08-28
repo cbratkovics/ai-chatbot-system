@@ -6,18 +6,16 @@ Generates regular reports and notifications for dependency health.
 
 import json
 import logging
-import smtplib
 import subprocess
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Dict, List, Optional
-import schedule
-import time
 
 import click
+import schedule
 import toml
 from jinja2 import Template
 from rich.console import Console
@@ -34,17 +32,19 @@ class ReportConfig:
     schedule_time: str = "09:00"  # Daily at 9 AM
     weekly_day: str = "monday"    # Weekly report day
     email_enabled: bool = False
-    email_recipients: List[str] = None
+    email_recipients: list[str] = None
     slack_enabled: bool = False
     slack_webhook: str = None
     github_enabled: bool = True
-    report_types: List[str] = None
+    report_types: list[str] = None
 
 
 class DependencyReporter:
     """Automated dependency reporting system."""
     
-    def __init__(self, project_root: Path = Path.cwd()):
+    def __init__(self, project_root: Path | None = None):
+        if project_root is None:
+            project_root = Path.cwd()
         self.project_root = project_root
         self.config_file = project_root / "config" / "dependency_reporter.toml"
         self.report_dir = project_root / "dependency_reports"
@@ -62,7 +62,7 @@ class DependencyReporter:
     def load_config(self) -> ReportConfig:
         """Load reporter configuration."""
         if self.config_file.exists():
-            with open(self.config_file, 'r') as f:
+            with open(self.config_file) as f:
                 config_data = toml.load(f)
                 return ReportConfig(**config_data.get("reporter", {}))
         
@@ -305,7 +305,7 @@ class DependencyReporter:
 *Report generated automatically by dependency-reporter*
         """)
     
-    def collect_report_data(self) -> Dict:
+    def collect_report_data(self) -> dict:
         """Collect data for report generation."""
         data = {
             "project_name": self.project_root.name,
@@ -323,7 +323,7 @@ class DependencyReporter:
         # Load latest health report
         latest_report = self.report_dir / "latest_report.json"
         if latest_report.exists():
-            with open(latest_report, 'r') as f:
+            with open(latest_report) as f:
                 health_data = json.load(f)
                 
                 data["total_packages"] = health_data.get("total_packages", 0)
@@ -615,8 +615,8 @@ def weekly():
     reporter.run_weekly_report()
 
 
-@cli.command()
-def schedule():
+@cli.command(name="schedule")
+def run_schedule():
     """Start scheduled reporting."""
     reporter = DependencyReporter()
     console.print("[bold blue]Starting scheduled reporting service...[/bold blue]")

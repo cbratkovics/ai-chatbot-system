@@ -5,7 +5,7 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -65,13 +65,13 @@ class BackpressureController:
         self.max_send_rate = max_send_rate
 
         # Per-connection metrics
-        self.connection_metrics: Dict[str, FlowMetrics] = {}
+        self.connection_metrics: dict[str, FlowMetrics] = {}
 
         # Message buffers
-        self.message_buffers: Dict[str, list] = {}
+        self.message_buffers: dict[str, list] = {}
 
         # Send rate limiters
-        self.rate_limiters: Dict[str, asyncio.Semaphore] = {}
+        self.rate_limiters: dict[str, asyncio.Semaphore] = {}
 
     async def can_send(self, session_id: str, message_size: int = 1) -> bool:
         """Check if can send message without causing backpressure.
@@ -103,7 +103,7 @@ class BackpressureController:
 
         return True
 
-    async def send_message(self, session_id: str, message: Dict[str, Any], send_func) -> bool:
+    async def send_message(self, session_id: str, message: dict[str, Any], send_func) -> bool:
         """Send message with backpressure control.
 
         Args:
@@ -139,7 +139,7 @@ class BackpressureController:
             await self._buffer_message(session_id, message)
             return False
 
-    async def handle_ack(self, session_id: str, ack_data: Dict[str, Any]):
+    async def handle_ack(self, session_id: str, ack_data: dict[str, Any]):
         """Handle acknowledgment from client.
 
         Args:
@@ -168,7 +168,7 @@ class BackpressureController:
         # Process buffered messages
         await self._process_buffer(session_id)
 
-    async def handle_nack(self, session_id: str, nack_data: Dict[str, Any]):
+    async def handle_nack(self, session_id: str, nack_data: dict[str, Any]):
         """Handle negative acknowledgment (client overload).
 
         Args:
@@ -191,7 +191,7 @@ class BackpressureController:
                 f"Received NACK for session {session_id}, " f"reducing rate to {new_rate} msg/s"
             )
 
-    async def _buffer_message(self, session_id: str, message: Dict[str, Any]):
+    async def _buffer_message(self, session_id: str, message: dict[str, Any]):
         """Buffer message for later sending.
 
         Args:
@@ -366,7 +366,7 @@ class BackpressureController:
         rate = max(self.min_send_rate, min(self.max_send_rate, rate))
         self.rate_limiters[session_id] = asyncio.Semaphore(int(rate))
 
-    async def get_session_stats(self, session_id: str) -> Dict[str, Any]:
+    async def get_session_stats(self, session_id: str) -> dict[str, Any]:
         """Get statistics for session.
 
         Args:

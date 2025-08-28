@@ -1,6 +1,7 @@
 """WebSocket routes for real-time chat functionality."""
 
 import logging
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 

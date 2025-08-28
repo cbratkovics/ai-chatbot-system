@@ -8,14 +8,15 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 
 import aioredis
-from fastapi import HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import HTTPException, WebSocket
 from prometheus_client import Counter, Gauge, Histogram
 
 logger = logging.getLogger(__name__)
@@ -55,10 +56,10 @@ class Connection:
     node_id: str
     region: str
     state: ConnectionState = ConnectionState.CONNECTING
-    connected_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    last_heartbeat: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    subscriptions: Set[str] = field(default_factory=set)
+    connected_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    last_heartbeat: datetime = field(default_factory=lambda: datetime.now(UTC))
+    metadata: dict[str, Any] = field(default_factory=dict)
+    subscriptions: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -66,18 +67,18 @@ class Message:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: MessageType = MessageType.CHAT
     content: Any = None
-    sender_id: Optional[str] = None
-    recipient_id: Optional[str] = None
-    channel: Optional[str] = None
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    sender_id: str | None = None
+    recipient_id: str | None = None
+    channel: str | None = None
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class WebSocketManager:
     """Production-ready WebSocket connection manager with horizontal scaling"""
 
     def __init__(
-        self, redis_url: str, node_id: str, region: str, config: Optional[Dict[str, Any]] = None
+        self, redis_url: str, node_id: str, region: str, config: dict[str, Any] | None = None
     ):
         self.redis_url = redis_url
         self.node_id = node_id
@@ -85,13 +86,13 @@ class WebSocketManager:
         self.config = config or {}
 
         # Connection pools
-        self.connections: Dict[str, Connection] = {}
-        self.user_connections: Dict[str, Set[str]] = {}  # user_id -> connection_ids
-        self.session_connections: Dict[str, Set[str]] = {}  # session_id -> connection_ids
+        self.connections: dict[str, Connection] = {}
+        self.user_connections: dict[str, set[str]] = {}  # user_id -> connection_ids
+        self.session_connections: dict[str, set[str]] = {}  # session_id -> connection_ids
 
         # Redis clients
-        self.redis: Optional[aioredis.Redis] = None
-        self.pubsub: Optional[aioredis.client.PubSub] = None
+        self.redis: aioredis.Redis | None = None
+        self.pubsub: aioredis.client.PubSub | None = None
 
         # Configuration
         self.heartbeat_interval = self.config.get("heartbeat_interval", 30)
@@ -101,12 +102,12 @@ class WebSocketManager:
         self.reconnect_window = self.config.get("reconnect_window", 300)  # 5 minutes
 
         # Background tasks
-        self._heartbeat_task: Optional[asyncio.Task] = None
-        self._pubsub_task: Optional[asyncio.Task] = None
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._heartbeat_task: asyncio.Task | None = None
+        self._pubsub_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task | None = None
 
         # Message handlers
-        self.handlers: Dict[MessageType, List[Callable]] = {
+        self.handlers: dict[MessageType, list[Callable]] = {
             msg_type: [] for msg_type in MessageType
         }
 
@@ -157,7 +158,7 @@ class WebSocketManager:
         user_id: str,
         tenant_id: str,
         session_id: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Context manager for WebSocket connections"""
         conn_id = None
@@ -176,7 +177,7 @@ class WebSocketManager:
         user_id: str,
         tenant_id: str,
         session_id: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Handle new WebSocket connection"""
         # Check connection limits
@@ -348,7 +349,7 @@ class WebSocketManager:
         channel = f"tenant:{tenant_id}"
         await self._publish_message(channel, message)
 
-    async def handle_incoming_message(self, connection_id: str, data: Dict[str, Any]):
+    async def handle_incoming_message(self, connection_id: str, data: dict[str, Any]):
         """Handle incoming WebSocket message"""
         start_time = time.time()
 
@@ -370,7 +371,7 @@ class WebSocketManager:
 
             # Handle heartbeat
             if message.type == MessageType.HEARTBEAT:
-                conn.last_heartbeat = datetime.now(timezone.utc)
+                conn.last_heartbeat = datetime.now(UTC)
                 await self.send_message(
                     connection_id, Message(type=MessageType.HEARTBEAT, content="pong")
                 )
@@ -412,7 +413,7 @@ class WebSocketManager:
             "status": status,
             "node_id": self.node_id,
             "region": self.region,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         # Store in Redis with TTL
@@ -425,7 +426,7 @@ class WebSocketManager:
 
         presence_updates.labels(action=status).inc()
 
-    async def get_presence(self, user_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    async def get_presence(self, user_ids: list[str]) -> dict[str, dict[str, Any]]:
         """Get presence status for multiple users"""
         if not user_ids:
             return {}
@@ -435,7 +436,7 @@ class WebSocketManager:
         values = await self.redis.mget(keys)
 
         result = {}
-        for user_id, value in zip(user_ids, values):
+        for user_id, value in zip(user_ids, values, strict=False):
             if value:
                 result[user_id] = json.loads(value)
             else:
@@ -554,7 +555,7 @@ class WebSocketManager:
             try:
                 await asyncio.sleep(self.heartbeat_interval)
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 dead_connections = []
 
                 for conn_id, conn in self.connections.items():
@@ -615,8 +616,8 @@ class WebSocketManager:
             "node_id": self.node_id,
             "region": self.region,
             "connections": len(self.connections),
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "last_update": datetime.now(timezone.utc).isoformat(),
+            "started_at": datetime.now(UTC).isoformat(),
+            "last_update": datetime.now(UTC).isoformat(),
         }
 
         await self.redis.setex(
@@ -627,7 +628,7 @@ class WebSocketManager:
         """Unregister this node from Redis"""
         await self.redis.delete(f"ws_node:{self.node_id}")
 
-    async def get_cluster_status(self) -> Dict[str, Any]:
+    async def get_cluster_status(self) -> dict[str, Any]:
         """Get status of all nodes in cluster"""
         pattern = "ws_node:*"
         nodes = []
@@ -638,7 +639,7 @@ class WebSocketManager:
 
             if keys:
                 values = await self.redis.mget(keys)
-                for key, value in zip(keys, values):
+                for _key, value in zip(keys, values, strict=False):
                     if value:
                         nodes.append(json.loads(value))
 
@@ -658,7 +659,7 @@ class WebSocketManager:
 
     async def handle_reconnection(
         self, websocket: WebSocket, user_id: str, old_connection_id: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Handle reconnection with session recovery"""
         # Check if old connection exists
         reconnect_key = f"reconnect:{old_connection_id}"

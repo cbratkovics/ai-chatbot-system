@@ -1,15 +1,11 @@
 """Advanced model router with intelligent selection using Strategy pattern."""
 
-import asyncio
 import logging
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
-
-import numpy as np
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +43,14 @@ class ModelProfile:
 
     provider: str
     model: str
-    capabilities: List[ModelCapability]
+    capabilities: list[ModelCapability]
     max_tokens: int
     cost_per_1k_input: float
     cost_per_1k_output: float
     avg_latency_ms: float
     quality_score: float  # 0-1 scale
     context_window: int
-    tier_access: List[str]  # Tenant tiers that can access
+    tier_access: list[str]  # Tenant tiers that can access
 
 
 @dataclass
@@ -62,18 +58,18 @@ class RoutingContext:
     """Context for routing decision."""
 
     query: str
-    task_type: Optional[TaskType]
+    task_type: TaskType | None
     token_count: int
-    tenant_id: Optional[str]
+    tenant_id: str | None
     tenant_tier: str
-    required_capabilities: List[ModelCapability]
-    max_cost: Optional[float]
-    max_latency_ms: Optional[float]
-    preferred_models: List[str]
-    excluded_models: List[str]
+    required_capabilities: list[ModelCapability]
+    max_cost: float | None
+    max_latency_ms: float | None
+    preferred_models: list[str]
+    excluded_models: list[str]
     temperature: float
     max_tokens: int
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 @dataclass
@@ -82,7 +78,7 @@ class RoutingDecision:
 
     primary_model: str
     primary_provider: str
-    fallback_models: List[Tuple[str, str]]  # [(provider, model)]
+    fallback_models: list[tuple[str, str]]  # [(provider, model)]
     strategy_used: str
     score: float
     estimated_cost: float
@@ -95,7 +91,7 @@ class RoutingStrategy(ABC):
 
     @abstractmethod
     async def select_model(
-        self, context: RoutingContext, available_models: List[ModelProfile]
+        self, context: RoutingContext, available_models: list[ModelProfile]
     ) -> RoutingDecision:
         """Select model based on strategy.
 
@@ -113,7 +109,7 @@ class CostOptimizedStrategy(RoutingStrategy):
     """Select cheapest model that meets requirements."""
 
     async def select_model(
-        self, context: RoutingContext, available_models: List[ModelProfile]
+        self, context: RoutingContext, available_models: list[ModelProfile]
     ) -> RoutingDecision:
         """Select most cost-effective model."""
         # Filter models by requirements
@@ -150,8 +146,8 @@ class CostOptimizedStrategy(RoutingStrategy):
         )
 
     def _filter_eligible_models(
-        self, context: RoutingContext, models: List[ModelProfile]
-    ) -> List[ModelProfile]:
+        self, context: RoutingContext, models: list[ModelProfile]
+    ) -> list[ModelProfile]:
         """Filter models based on requirements."""
         eligible = []
 
@@ -193,7 +189,7 @@ class PerformanceOptimizedStrategy(RoutingStrategy):
     """Select highest quality model within constraints."""
 
     async def select_model(
-        self, context: RoutingContext, available_models: List[ModelProfile]
+        self, context: RoutingContext, available_models: list[ModelProfile]
     ) -> RoutingDecision:
         """Select highest performance model."""
         # Filter eligible models
@@ -230,8 +226,8 @@ class PerformanceOptimizedStrategy(RoutingStrategy):
         )
 
     def _filter_by_constraints(
-        self, context: RoutingContext, models: List[ModelProfile]
-    ) -> List[ModelProfile]:
+        self, context: RoutingContext, models: list[ModelProfile]
+    ) -> list[ModelProfile]:
         """Filter models by constraints."""
         eligible = []
 
@@ -288,7 +284,7 @@ class CapabilityBasedStrategy(RoutingStrategy):
     """Select model based on required capabilities."""
 
     async def select_model(
-        self, context: RoutingContext, available_models: List[ModelProfile]
+        self, context: RoutingContext, available_models: list[ModelProfile]
     ) -> RoutingDecision:
         """Select model based on capabilities."""
         # Filter by required capabilities
@@ -372,7 +368,7 @@ class AdaptiveStrategy(RoutingStrategy):
         self.cost_history = {}
 
     async def select_model(
-        self, context: RoutingContext, available_models: List[ModelProfile]
+        self, context: RoutingContext, available_models: list[ModelProfile]
     ) -> RoutingDecision:
         """Select model based on historical performance."""
         # Filter eligible models
@@ -407,8 +403,8 @@ class AdaptiveStrategy(RoutingStrategy):
         )
 
     def _filter_eligible(
-        self, context: RoutingContext, models: List[ModelProfile]
-    ) -> List[ModelProfile]:
+        self, context: RoutingContext, models: list[ModelProfile]
+    ) -> list[ModelProfile]:
         """Filter eligible models."""
         return [
             m
@@ -524,7 +520,7 @@ class ModelRouter:
         self.model_profiles = self._load_model_profiles()
         self.routing_history = []
 
-    def _load_model_profiles(self) -> List[ModelProfile]:
+    def _load_model_profiles(self) -> list[ModelProfile]:
         """Load model profiles."""
         return [
             # OpenAI Models
@@ -653,9 +649,9 @@ class ModelRouter:
     async def route(
         self,
         query: str,
-        tenant_id: Optional[str] = None,
+        tenant_id: str | None = None,
         tenant_tier: str = "basic",
-        strategy: Optional[str] = None,
+        strategy: str | None = None,
         **kwargs,
     ) -> RoutingDecision:
         """Route query to appropriate model.
@@ -757,7 +753,7 @@ class ModelRouter:
         # Simple estimation: ~4 characters per token
         return len(text) // 4
 
-    def _determine_capabilities(self, query: str, task_type: TaskType) -> List[ModelCapability]:
+    def _determine_capabilities(self, query: str, task_type: TaskType) -> list[ModelCapability]:
         """Determine required capabilities.
 
         Args:
@@ -861,7 +857,7 @@ class ModelRouter:
                 ) * profile.avg_latency_ms + alpha * actual_latency_ms
                 break
 
-    def get_routing_stats(self) -> Dict[str, Any]:
+    def get_routing_stats(self) -> dict[str, Any]:
         """Get routing statistics.
 
         Returns:

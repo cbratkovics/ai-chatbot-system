@@ -2,7 +2,6 @@
 
 import logging
 from functools import wraps
-from typing import List, Optional
 
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -19,7 +18,7 @@ security = HTTPBearer()
 class AuthMiddleware:
     """Authentication middleware for FastAPI."""
 
-    def __init__(self, exclude_paths: List[str] = None):
+    def __init__(self, exclude_paths: list[str] = None):
         self.exclude_paths = exclude_paths or [
             "/",
             "/docs",
@@ -70,7 +69,7 @@ class AuthMiddleware:
         return response
 
 
-def require_auth(permissions: Optional[List[Permission]] = None, any_permission: bool = False):
+def require_auth(permissions: list[Permission] | None = None, any_permission: bool = False):
     """Decorator to require authentication and optionally check permissions."""
 
     def decorator(func):

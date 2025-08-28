@@ -4,8 +4,6 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +67,9 @@ class CostSummary:
     prompt_cost: float = 0.0
     completion_cost: float = 0.0
 
-    cost_by_provider: Dict[str, float] = field(default_factory=dict)
-    cost_by_model: Dict[str, float] = field(default_factory=dict)
-    cost_by_tenant: Dict[str, float] = field(default_factory=dict)
+    cost_by_provider: dict[str, float] = field(default_factory=dict)
+    cost_by_model: dict[str, float] = field(default_factory=dict)
+    cost_by_tenant: dict[str, float] = field(default_factory=dict)
 
     cache_savings: float = 0.0
 
@@ -112,9 +110,9 @@ class CostTracker:
     }
 
     def __init__(self):
-        self.entries: List[CostEntry] = []
-        self.daily_costs: Dict[str, float] = {}
-        self.monthly_costs: Dict[str, float] = {}
+        self.entries: list[CostEntry] = []
+        self.daily_costs: dict[str, float] = {}
+        self.monthly_costs: dict[str, float] = {}
 
         logger.info("Cost tracker initialized")
 
@@ -124,9 +122,9 @@ class CostTracker:
         model: str,
         prompt_tokens: int,
         completion_tokens: int,
-        tenant_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        conversation_id: Optional[str] = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+        conversation_id: str | None = None,
         cached: bool = False,
     ) -> CostEntry:
         """Track provider usage and calculate costs."""
@@ -179,9 +177,9 @@ class CostTracker:
 
     def get_summary(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        tenant_id: Optional[str] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        tenant_id: str | None = None,
     ) -> CostSummary:
         """Get cost summary for period."""
 
@@ -243,9 +241,9 @@ class CostTracker:
     def get_tenant_usage(
         self,
         tenant_id: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-    ) -> Dict:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> dict:
         """Get usage details for a specific tenant."""
         summary = self.get_summary(start_time, end_time, tenant_id)
 
@@ -268,7 +266,7 @@ class CostTracker:
             },
         }
 
-    def get_cost_projection(self, days: int = 30) -> Dict:
+    def get_cost_projection(self, days: int = 30) -> dict:
         """Project costs based on recent usage."""
 
         # Get last 7 days of usage

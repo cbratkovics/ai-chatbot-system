@@ -9,11 +9,9 @@ import logging
 import os
 import platform
 import subprocess
-import sys
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
 import click
 import toml
@@ -36,15 +34,17 @@ class DependencyProfile:
     """Dependency profile for different environments."""
     name: str
     environment: ComputeEnvironment
-    packages: Dict[str, str]
-    optional_packages: Set[str]
-    conflicting_packages: Set[str]
+    packages: dict[str, str]
+    optional_packages: set[str]
+    conflicting_packages: set[str]
 
 
 class DependencyManager:
     """Manage dependencies intelligently for AI/ML workloads."""
     
-    def __init__(self, project_root: Path = Path.cwd()):
+    def __init__(self, project_root: Path | None = None):
+        if project_root is None:
+            project_root = Path.cwd()
         self.project_root = project_root
         self.pyproject_path = project_root / "pyproject.toml"
         self.config_dir = project_root / "config" / "dependencies"
@@ -170,7 +170,7 @@ class DependencyManager:
         
         return os.environ.get("ROCM_HOME") is not None
     
-    def resolve_ml_dependencies(self, environment: ComputeEnvironment) -> Dict[str, str]:
+    def resolve_ml_dependencies(self, environment: ComputeEnvironment) -> dict[str, str]:
         """Resolve ML dependencies for the given environment."""
         resolved = {}
         
@@ -181,7 +181,7 @@ class DependencyManager:
         
         return resolved
     
-    def detect_conflicts(self, dependencies: Dict[str, str]) -> List[Tuple[str, str, str]]:
+    def detect_conflicts(self, dependencies: dict[str, str]) -> list[tuple[str, str, str]]:
         """Detect potential conflicts in dependencies."""
         conflicts = []
         
@@ -268,7 +268,7 @@ class DependencyManager:
             logger.error(f"Failed to export requirements: {e}")
             return False
     
-    def check_security(self) -> List[Dict]:
+    def check_security(self) -> list[dict]:
         """Check for security vulnerabilities in dependencies."""
         logger.info("Checking for security vulnerabilities...")
         
@@ -299,7 +299,7 @@ class DependencyManager:
         
         return vulnerabilities
     
-    def generate_sbom(self) -> Dict:
+    def generate_sbom(self) -> dict:
         """Generate Software Bill of Materials."""
         logger.info("Generating SBOM...")
         
@@ -342,7 +342,7 @@ class DependencyManager:
         logger.info(f"Optimizing for {environment.value} environment with {profile} profile")
         
         # Load current pyproject.toml
-        with open(self.pyproject_path, 'r') as f:
+        with open(self.pyproject_path) as f:
             config = toml.load(f)
         
         # Get ML dependencies for environment
@@ -373,7 +373,7 @@ class DependencyManager:
         # Export requirements
         self.export_requirements(profile)
     
-    def create_update_pr(self, updates: List[Dict]) -> bool:
+    def create_update_pr(self, updates: list[dict]) -> bool:
         """Create a pull request for dependency updates."""
         logger.info("Creating update PR...")
         
@@ -393,7 +393,7 @@ class DependencyManager:
             # Commit changes
             subprocess.run(["git", "add", "pyproject.toml", "poetry.lock"], check=True)
             subprocess.run(
-                ["git", "commit", "-m", f"chore: update dependencies\n\nUpdates:\n" + 
+                ["git", "commit", "-m", "chore: update dependencies\n\nUpdates:\n" + 
                  "\n".join([f"- {u['package']}: {u['old_version']} -> {u['new_version']}" for u in updates])],
                 check=True
             )

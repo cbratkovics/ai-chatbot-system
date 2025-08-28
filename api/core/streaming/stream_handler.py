@@ -3,7 +3,8 @@
 import asyncio
 import json
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class StreamHandler:
         buffer_size: int = 10,
         chunk_size: int = 1024,
         timeout: int = 60,
-        metrics_collector: Optional[Any] = None,
+        metrics_collector: Any | None = None,
     ):
         """Initialize stream handler.
 
@@ -53,7 +54,7 @@ class StreamHandler:
 
         return _sse_generator()
 
-    def chunk_response(self, data: str, chunk_size: Optional[int] = None) -> List[str]:
+    def chunk_response(self, data: str, chunk_size: int | None = None) -> list[str]:
         """Split response into chunks.
 
         Args:
@@ -67,7 +68,7 @@ class StreamHandler:
         return [data[i : i + chunk_size] for i in range(0, len(data), chunk_size)]
 
     async def stream_with_timeout(
-        self, data_generator: AsyncGenerator[Any, None], timeout: Optional[int] = None
+        self, data_generator: AsyncGenerator[Any, None], timeout: int | None = None
     ) -> AsyncGenerator[Any, None]:
         """Stream with timeout protection.
 
@@ -86,7 +87,7 @@ class StreamHandler:
                     self._consume_generator(data_generator), timeout=timeout
                 ):
                     yield data
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(f"Stream timeout after {timeout} seconds")
                 raise
 
@@ -129,8 +130,8 @@ class StreamHandler:
         return _handled_generator()
 
     async def buffer_stream(
-        self, data_generator: AsyncGenerator[Any, None], buffer_size: Optional[int] = None
-    ) -> AsyncGenerator[List[Any], None]:
+        self, data_generator: AsyncGenerator[Any, None], buffer_size: int | None = None
+    ) -> AsyncGenerator[list[Any], None]:
         """Buffer stream data.
 
         Args:
@@ -228,7 +229,7 @@ class StreamHandler:
                     yield data
 
                     chunks_sent += 1
-                    if isinstance(data, (str, bytes)):
+                    if isinstance(data, str | bytes):
                         bytes_sent += len(data)
 
                     if self.metrics_collector:
@@ -268,15 +269,14 @@ class StreamHandler:
         """
 
         async def _merged_generator():
-            tasks = [asyncio.create_task(self._consume_to_queue(gen, queue)) for gen in generators]
-
             queue = asyncio.Queue()
+            tasks = [asyncio.create_task(self._consume_to_queue(gen, queue)) for gen in generators]
 
             while any(not task.done() for task in tasks):
                 try:
                     data = await asyncio.wait_for(queue.get(), timeout=1.0)
                     yield data
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
 
             while not queue.empty():

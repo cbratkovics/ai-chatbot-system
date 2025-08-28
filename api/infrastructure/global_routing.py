@@ -5,18 +5,14 @@ AWS Route53, Lambda@Edge, and cross-region replication
 
 import asyncio
 import hashlib
-import ipaddress
-import json
 import logging
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import aioredis
+import aiohttp
 import boto3
-import requests
 from botocore.exceptions import ClientError
 from geoip2 import database as geoip_db
 from geopy.distance import geodesic
@@ -56,7 +52,7 @@ class Region:
 class RoutingRule:
     rule_id: str
     priority: int
-    conditions: Dict[str, Any]
+    conditions: dict[str, Any]
     target_region: str
     weight: int
     enabled: bool = True
@@ -67,7 +63,7 @@ class GlobalRoutingManager:
     Manages global traffic routing with Route53, Lambda@Edge, and health checks
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.route53 = boto3.client("route53")
         self.cloudfront = boto3.client("cloudfront")
@@ -80,11 +76,11 @@ class GlobalRoutingManager:
         self.geoip_reader = None
         try:
             self.geoip_reader = geoip_db.Reader("GeoLite2-City.mmdb")
-        except:
+        except Exception:
             logger.warning("GeoIP database not found")
 
         # Routing rules
-        self.routing_rules: List[RoutingRule] = []
+        self.routing_rules: list[RoutingRule] = []
         self._load_routing_rules()
 
         # Health check configuration
@@ -231,7 +227,7 @@ def lambda_handler(event, context):
 
         try:
             # Deploy origin request function
-            origin_function = self.lambda_client.create_function(
+            self.lambda_client.create_function(
                 FunctionName="chatbot-origin-request",
                 Runtime="python3.9",
                 Role=self.config["lambda_execution_role_arn"],
@@ -243,7 +239,7 @@ def lambda_handler(event, context):
             )
 
             # Deploy viewer response function
-            viewer_function = self.lambda_client.create_function(
+            self.lambda_client.create_function(
                 FunctionName="chatbot-viewer-response",
                 Runtime="python3.9",
                 Role=self.config["lambda_execution_role_arn"],
@@ -358,9 +354,9 @@ def lambda_handler(event, context):
     async def route_request(
         self,
         client_ip: str,
-        session_id: Optional[str] = None,
-        user_preferences: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[str, Region]:
+        session_id: str | None = None,
+        user_preferences: dict[str, Any] | None = None,
+    ) -> tuple[str, Region]:
         """
         Intelligent request routing based on geography, load, and preferences
         """
@@ -427,7 +423,7 @@ def lambda_handler(event, context):
 
         return best_region_name, best_region
 
-    def _get_client_location(self, client_ip: str) -> Optional[Dict[str, Any]]:
+    def _get_client_location(self, client_ip: str) -> dict[str, Any] | None:
         """Get client geographic location from IP"""
         if not self.geoip_reader:
             return None
@@ -440,7 +436,7 @@ def lambda_handler(event, context):
                 "latitude": float(response.location.latitude),
                 "longitude": float(response.location.longitude),
             }
-        except:
+        except Exception:
             return None
 
     def _get_sticky_region(self, session_id: str) -> str:
@@ -522,7 +518,7 @@ def lambda_handler(event, context):
             except Exception as e:
                 logger.error(f"Capacity monitoring error: {e}")
 
-    async def _get_region_load(self, region: Region) -> Dict[str, Any]:
+    async def _get_region_load(self, region: Region) -> dict[str, Any]:
         """Get current load metrics for a region"""
         try:
             async with aiohttp.ClientSession() as session:
@@ -530,7 +526,7 @@ def lambda_handler(event, context):
                     if response.status == 200:
                         return await response.json()
                     return {}
-        except:
+        except Exception:
             return {}
 
     async def _trigger_auto_scaling(self, region_name: str, action: str):
@@ -569,8 +565,8 @@ class BlueGreenDeploymentManager:
         self.deployment_states = {}
 
     async def deploy_new_version(
-        self, version: str, regions: List[str], strategy: str = "rolling"
-    ) -> Dict[str, Any]:
+        self, version: str, regions: list[str], strategy: str = "rolling"
+    ) -> dict[str, Any]:
         """
         Deploy new version using blue-green strategy
         """
@@ -591,8 +587,8 @@ class BlueGreenDeploymentManager:
             raise
 
     async def _blue_green_deployment(
-        self, deployment_id: str, version: str, regions: List[str]
-    ) -> Dict[str, Any]:
+        self, deployment_id: str, version: str, regions: list[str]
+    ) -> dict[str, Any]:
         """
         Full blue-green deployment
         """
@@ -626,8 +622,8 @@ class BlueGreenDeploymentManager:
         return {"deployment_id": deployment_id, "strategy": "blue-green", "results": results}
 
     async def _canary_deployment(
-        self, deployment_id: str, version: str, regions: List[str]
-    ) -> Dict[str, Any]:
+        self, deployment_id: str, version: str, regions: list[str]
+    ) -> dict[str, Any]:
         """
         Canary deployment with gradual traffic shift
         """
@@ -675,7 +671,7 @@ class BlueGreenDeploymentManager:
             async with aiohttp.ClientSession() as session:
                 async with session.get(f"{endpoint}/health") as response:
                     return response.status == 200
-        except:
+        except Exception:
             return False
 
     async def _switch_traffic_to_green(self, region_name: str):
@@ -708,7 +704,7 @@ class ChaosEngineeringFramework:
 
     async def run_chaos_experiment(
         self, experiment_type: str, target_region: str, duration: int = 300
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run chaos engineering experiment
         """
@@ -774,7 +770,7 @@ class ChaosEngineeringFramework:
         # Restore original response time
         self.routing_manager.regions[region].response_time = original_response_time
 
-    async def _collect_baseline_metrics(self) -> Dict[str, Any]:
+    async def _collect_baseline_metrics(self) -> dict[str, Any]:
         """Collect baseline system metrics"""
 
         metrics = {}
@@ -785,18 +781,18 @@ class ChaosEngineeringFramework:
                     async with session.get(f"{region.endpoint}/metrics") as response:
                         if response.status == 200:
                             metrics[region_name] = await response.json()
-            except:
+            except Exception:
                 metrics[region_name] = {}
 
         return metrics
 
-    async def _monitor_during_experiment(self, duration: int) -> Dict[str, Any]:
+    async def _monitor_during_experiment(self, duration: int) -> dict[str, Any]:
         """Monitor system during chaos experiment"""
 
         monitoring_data = []
         interval = 30  # Collect metrics every 30 seconds
 
-        for i in range(duration // interval):
+        for _i in range(duration // interval):
             metrics = await self._collect_baseline_metrics()
             monitoring_data.append({"timestamp": time.time(), "metrics": metrics})
 
@@ -805,8 +801,8 @@ class ChaosEngineeringFramework:
         return monitoring_data
 
     async def _analyze_experiment_results(
-        self, baseline: Dict[str, Any], experiment_data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, baseline: dict[str, Any], experiment_data: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Analyze chaos experiment results"""
 
         # Calculate recovery time
@@ -825,7 +821,7 @@ class ChaosEngineeringFramework:
             "recommendations": self._generate_recommendations(experiment_data),
         }
 
-    def _calculate_recovery_time(self, data: List[Dict[str, Any]]) -> float:
+    def _calculate_recovery_time(self, data: list[dict[str, Any]]) -> float:
         """Calculate system recovery time"""
 
         # Find when system returned to normal
@@ -842,7 +838,7 @@ class ChaosEngineeringFramework:
 
         return float("inf")  # System didn't recover
 
-    def _generate_recommendations(self, data: List[Dict[str, Any]]) -> List[str]:
+    def _generate_recommendations(self, data: list[dict[str, Any]]) -> list[str]:
         """Generate improvement recommendations"""
 
         recommendations = []

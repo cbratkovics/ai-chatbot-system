@@ -10,12 +10,10 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ConnectTimeout, HTTPStatusError, RequestError
+from httpx import ConnectTimeout, HTTPStatusError, RequestError
 
 # Test configuration
 FAILOVER_THRESHOLD_ISOLATED = 500  # ms
@@ -26,14 +24,14 @@ TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 class ProviderMock:
     """Mock AI provider with configurable failure modes"""
     
-    def __init__(self, name: str, fail_mode: Optional[str] = None, fail_after: int = 0):
+    def __init__(self, name: str, fail_mode: str | None = None, fail_after: int = 0):
         self.name = name
         self.fail_mode = fail_mode
         self.fail_after = fail_after
         self.call_count = 0
         self.response_time = 50  # Base response time in ms
     
-    async def complete(self, prompt: str, **kwargs) -> Dict:
+    async def complete(self, prompt: str, **kwargs) -> dict:
         """Simulate API call with potential failures"""
         self.call_count += 1
         
@@ -83,12 +81,12 @@ class ProviderMock:
 class ProviderOrchestrator:
     """Multi-provider orchestration with automatic failover"""
     
-    def __init__(self, providers: List[ProviderMock], timeout: float = 1.0):
+    def __init__(self, providers: list[ProviderMock], timeout: float = 1.0):
         self.providers = providers
         self.timeout = timeout
         self.failover_log = []
     
-    async def complete_with_failover(self, prompt: str, **kwargs) -> Tuple[Dict, float]:
+    async def complete_with_failover(self, prompt: str, **kwargs) -> tuple[dict, float]:
         """
         Attempt completion with automatic failover.
         Returns (response, failover_time_ms)
@@ -120,7 +118,7 @@ class ProviderOrchestrator:
                 
                 return response, failover_time
                 
-            except (asyncio.TimeoutError, ConnectTimeout) as e:
+            except (TimeoutError, ConnectTimeout):
                 last_error = f"Timeout: {provider.name}"
                 self._log_failure(provider, "timeout", provider_start)
                 
@@ -132,7 +130,7 @@ class ProviderOrchestrator:
                     last_error = f"HTTP {e.response.status_code}: {provider.name}"
                     self._log_failure(provider, "http_error", provider_start)
                     
-            except RequestError as e:
+            except RequestError:
                 last_error = f"Connection error: {provider.name}"
                 self._log_failure(provider, "connection_error", provider_start)
                 
@@ -329,7 +327,7 @@ class TestProviderFailover:
                 for attempt in range(max_retries):
                     try:
                         return await self.complete_with_failover(prompt)
-                    except Exception as e:
+                    except Exception:
                         if attempt < max_retries - 1:
                             wait_time = (2 ** attempt) * 0.1  # Exponential backoff
                             await asyncio.sleep(wait_time)

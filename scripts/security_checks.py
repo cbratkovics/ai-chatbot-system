@@ -6,17 +6,13 @@ Comprehensive security checks for CI/CD pipeline
 
 import argparse
 import json
+import logging
 import os
+import re
 import subprocess
 import sys
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-import yaml
-import re
-import requests
 from dataclasses import dataclass
-import logging
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,9 +25,9 @@ class SecurityFinding:
     title: str
     description: str
     file_path: str
-    line_number: Optional[int] = None
-    cve_id: Optional[str] = None
-    recommendation: Optional[str] = None
+    line_number: int | None = None
+    cve_id: str | None = None
+    recommendation: str | None = None
 
 @dataclass
 class SecurityReport:
@@ -41,8 +37,8 @@ class SecurityReport:
     high_findings: int
     medium_findings: int
     low_findings: int
-    findings: List[SecurityFinding]
-    compliance_status: Dict[str, bool]
+    findings: list[SecurityFinding]
+    compliance_status: dict[str, bool]
 
 class LicenseChecker:
     """License compliance checker"""
@@ -59,12 +55,12 @@ class LicenseChecker:
     def __init__(self):
         self.violations = []
         
-    def check_licenses(self, licenses_file: str) -> List[SecurityFinding]:
+    def check_licenses(self, licenses_file: str) -> list[SecurityFinding]:
         """Check license compliance"""
         findings = []
         
         try:
-            with open(licenses_file, 'r') as f:
+            with open(licenses_file) as f:
                 licenses_data = json.load(f)
                 
             for package in licenses_data:
@@ -109,7 +105,7 @@ class SecretScanner:
         'DATABASE_URL': r'(postgresql|mysql|mongodb)://[^:]+:[^@]+@[^/]+/[^?\s]+',
     }
     
-    def scan_directory(self, directory: str) -> List[SecurityFinding]:
+    def scan_directory(self, directory: str) -> list[SecurityFinding]:
         """Scan directory for secrets"""
         findings = []
         
@@ -124,19 +120,19 @@ class SecretScanner:
                     
         return findings
     
-    def _scan_file(self, file_path: str) -> List[SecurityFinding]:
+    def _scan_file(self, file_path: str) -> list[SecurityFinding]:
         """Scan individual file for secrets"""
         findings = []
         
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, encoding='utf-8', errors='ignore') as f:
                 content = f.read()
                 lines = content.split('\n')
                 
                 for line_num, line in enumerate(lines, 1):
                     for secret_type, pattern in self.SECRET_PATTERNS.items():
                         matches = re.finditer(pattern, line, re.IGNORECASE)
-                        for match in matches:
+                        for _match in matches:
                             # Skip if it's in a comment or test file
                             if self._is_false_positive(line, file_path):
                                 continue
@@ -175,7 +171,7 @@ class SecretScanner:
 class VulnerabilityScanner:
     """Vulnerability scanning using multiple tools"""
     
-    def scan_dependencies(self) -> List[SecurityFinding]:
+    def scan_dependencies(self) -> list[SecurityFinding]:
         """Scan dependencies for vulnerabilities"""
         findings = []
         
@@ -217,7 +213,7 @@ class VulnerabilityScanner:
 class ComplianceChecker:
     """Compliance validation for various standards"""
     
-    def check_gdpr_compliance(self) -> Dict[str, bool]:
+    def check_gdpr_compliance(self) -> dict[str, bool]:
         """Check GDPR compliance indicators"""
         compliance = {}
         
@@ -241,7 +237,7 @@ class ComplianceChecker:
         
         return compliance
     
-    def check_soc2_compliance(self) -> Dict[str, bool]:
+    def check_soc2_compliance(self) -> dict[str, bool]:
         """Check SOC 2 compliance indicators"""
         compliance = {}
         
@@ -254,17 +250,17 @@ class ComplianceChecker:
         
         return compliance
     
-    def _search_for_patterns(self, patterns: List[str]) -> bool:
+    def _search_for_patterns(self, patterns: list[str]) -> bool:
         """Search for patterns in codebase"""
-        for root, dirs, files in os.walk('.'):
+        for root, _dirs, files in os.walk('.'):
             for file in files:
                 if file.endswith(('.py', '.md', '.rst', '.txt')):
                     try:
-                        with open(os.path.join(root, file), 'r', errors='ignore') as f:
+                        with open(os.path.join(root, file), errors='ignore') as f:
                             content = f.read().lower()
                             if any(pattern.lower() in content for pattern in patterns):
                                 return True
-                    except:
+                    except (OSError, UnicodeDecodeError):
                         continue
         return False
     

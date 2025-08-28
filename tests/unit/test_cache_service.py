@@ -1,8 +1,8 @@
 """Unit tests for cache service."""
 
 import json
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from unittest.mock import patch
 
 import numpy as np
 import pytest

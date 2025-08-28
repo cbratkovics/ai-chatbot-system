@@ -1,10 +1,10 @@
 """Multi-tenant middleware for request isolation and context injection."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class TenantContext:
     """Tenant context for request processing."""
 
-    def __init__(self, tenant_id: UUID, tenant_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, tenant_id: UUID, tenant_config: dict[str, Any] | None = None):
         self.tenant_id = tenant_id
         self.tenant_config = tenant_config or {}
         self.usage_limits = tenant_config.get("usage_limits", {}) if tenant_config else {}
@@ -113,7 +113,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 content={"error": "Tenant processing failed", "detail": str(e)},
             )
 
-    async def _extract_tenant_id(self, request: Request) -> Optional[str]:
+    async def _extract_tenant_id(self, request: Request) -> str | None:
         """
         Extract tenant ID from request headers, API key, or path.
         Priority: x-tenant-id header > API key mapping > subdomain > default
@@ -152,7 +152,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         return None
 
-    async def _get_tenant_from_api_key(self, api_key: str) -> Optional[str]:
+    async def _get_tenant_from_api_key(self, api_key: str) -> str | None:
         """Map API key to tenant ID (mock implementation)."""
         # Mock mapping for demo - in production this would be a database lookup
         api_key_mappings = {
@@ -163,7 +163,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         return api_key_mappings.get(api_key)
 
-    def get_tenant_config(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+    def get_tenant_config(self, tenant_id: str) -> dict[str, Any] | None:
         """Get tenant configuration (for external access)."""
         return self._tenant_configs.get(tenant_id)
 
@@ -175,7 +175,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         return feature in tenant_context.features
 
-    def get_usage_limit(self, request: Request, limit_type: str) -> Optional[int]:
+    def get_usage_limit(self, request: Request, limit_type: str) -> int | None:
         """Get usage limit for the current tenant."""
         tenant_context = getattr(request.state, "tenant", None)
         if not tenant_context:

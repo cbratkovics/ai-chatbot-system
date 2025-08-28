@@ -4,25 +4,20 @@ Socket.IO with Redis adapter, sticky sessions, message queues, and WebRTC
 """
 
 import asyncio
-import base64
 import hashlib
 import json
 import logging
-import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 
-import aiohttp
 import jwt
 import redis.asyncio as redis
 import socketio
 from aiohttp import web
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +55,7 @@ class WebSocketConnection:
     room: str
     status: ConnectionStatus
     last_seen: datetime
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     reconnect_attempts: int = 0
     max_reconnects: int = 5
 
@@ -70,10 +65,10 @@ class QueuedMessage:
     id: str
     session_id: str
     message_type: MessageType
-    content: Dict[str, Any]
+    content: dict[str, Any]
     priority: MessagePriority
     timestamp: datetime
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     retry_count: int = 0
 
 
@@ -82,8 +77,8 @@ class PresenceInfo:
     user_id: str
     status: str  # online, away, busy, invisible
     last_activity: datetime
-    device_info: Dict[str, Any] = field(default_factory=dict)
-    custom_status: Optional[str] = None
+    device_info: dict[str, Any] = field(default_factory=dict)
+    custom_status: str | None = None
 
 
 class ScalableWebSocketManager:
@@ -91,7 +86,7 @@ class ScalableWebSocketManager:
     Production-grade WebSocket manager with horizontal scaling capabilities
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
 
         # Redis for pub/sub and session management
@@ -109,22 +104,22 @@ class ScalableWebSocketManager:
         )
 
         # Connection tracking
-        self.connections: Dict[str, WebSocketConnection] = {}
-        self.user_sessions: Dict[str, Set[str]] = {}  # user_id -> session_ids
-        self.room_members: Dict[str, Set[str]] = {}  # room -> session_ids
+        self.connections: dict[str, WebSocketConnection] = {}
+        self.user_sessions: dict[str, set[str]] = {}  # user_id -> session_ids
+        self.room_members: dict[str, set[str]] = {}  # room -> session_ids
 
         # Message queue for guaranteed delivery
-        self.message_queue: Dict[str, List[QueuedMessage]] = {}
-        self.processing_queues: Set[str] = set()
+        self.message_queue: dict[str, list[QueuedMessage]] = {}
+        self.processing_queues: set[str] = set()
 
         # Presence system
-        self.presence_info: Dict[str, PresenceInfo] = {}
+        self.presence_info: dict[str, PresenceInfo] = {}
 
         # WebRTC signaling support
-        self.webrtc_rooms: Dict[str, Dict[str, Any]] = {}
+        self.webrtc_rooms: dict[str, dict[str, Any]] = {}
 
         # Rate limiting
-        self.rate_limiters: Dict[str, Dict[str, Any]] = {}
+        self.rate_limiters: dict[str, dict[str, Any]] = {}
 
         # Setup event handlers
         self._setup_event_handlers()
@@ -184,7 +179,7 @@ class ScalableWebSocketManager:
                     socket_id=sid,
                     room=user_info.get("room", f"user_{user_info['user_id']}"),
                     status=ConnectionStatus.CONNECTED,
-                    last_seen=datetime.now(timezone.utc),
+                    last_seen=datetime.now(UTC),
                     metadata=user_info.get("metadata", {}),
                 )
 
@@ -242,7 +237,7 @@ class ScalableWebSocketManager:
 
                 # Update connection status
                 connection.status = ConnectionStatus.DISCONNECTED
-                connection.last_seen = datetime.now(timezone.utc)
+                connection.last_seen = datetime.now(UTC)
 
                 # Leave room
                 await self.sio.leave_room(sid, connection.room)
@@ -285,7 +280,7 @@ class ScalableWebSocketManager:
                     return
 
                 # Update last seen
-                connection.last_seen = datetime.now(timezone.utc)
+                connection.last_seen = datetime.now(UTC)
 
                 # Process message based on type
                 message_type = MessageType(data["type"])
@@ -364,7 +359,7 @@ class ScalableWebSocketManager:
             except Exception as e:
                 logger.error(f"WebRTC signaling error: {e}")
 
-    async def _authenticate_connection(self, auth: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def _authenticate_connection(self, auth: dict[str, Any]) -> dict[str, Any] | None:
         """Authenticate WebSocket connection"""
         try:
             token = auth.get("token")
@@ -434,7 +429,7 @@ class ScalableWebSocketManager:
             logger.error(f"Rate limit check error: {e}")
             return True  # Allow connection on error
 
-    async def _handle_chat_message(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_chat_message(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle chat message"""
         try:
             message_id = str(uuid.uuid4())
@@ -449,7 +444,7 @@ class ScalableWebSocketManager:
                 "sender_id": connection.user_id,
                 "session_id": connection.session_id,
                 "room": target_room,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "metadata": data.get("metadata", {}),
             }
 
@@ -469,7 +464,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Chat message error: {e}")
 
-    async def _handle_typing_message(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_typing_message(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle typing indicator"""
         try:
             typing_data = {
@@ -486,7 +481,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Typing message error: {e}")
 
-    async def _handle_webrtc_signaling(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_webrtc_signaling(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle WebRTC signaling messages"""
         try:
             signal_type = data.get("signal_type")
@@ -523,14 +518,14 @@ class ScalableWebSocketManager:
             logger.error(f"WebRTC signaling error: {e}")
 
     async def _update_user_presence(
-        self, user_id: str, status: str, device_info: Dict[str, Any] = None
+        self, user_id: str, status: str, device_info: dict[str, Any] = None
     ):
         """Update user presence information"""
         try:
             presence = PresenceInfo(
                 user_id=user_id,
                 status=status,
-                last_activity=datetime.now(timezone.utc),
+                last_activity=datetime.now(UTC),
                 device_info=device_info or {},
             )
 
@@ -569,7 +564,7 @@ class ScalableWebSocketManager:
                     {
                         "user_id": user_id,
                         "status": status,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                     },
                     room=room,
                 )
@@ -577,7 +572,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Presence broadcast error: {e}")
 
-    async def _queue_message_for_offline_users(self, room: str, message: Dict[str, Any]):
+    async def _queue_message_for_offline_users(self, room: str, message: dict[str, Any]):
         """Queue message for offline users in room"""
         try:
             # This would typically query a database to find offline users in the room
@@ -589,8 +584,8 @@ class ScalableWebSocketManager:
                 message_type=MessageType.CHAT,
                 content=message,
                 priority=MessagePriority.NORMAL,
-                timestamp=datetime.now(timezone.utc),
-                expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+                timestamp=datetime.now(UTC),
+                expires_at=datetime.now(UTC) + timedelta(days=7),
             )
 
             # Store in Redis for persistence
@@ -637,7 +632,7 @@ class ScalableWebSocketManager:
                     # Check if message hasn't expired
                     if message.get("expires_at"):
                         expires_at = datetime.fromisoformat(message["expires_at"])
-                        if datetime.now(timezone.utc) > expires_at:
+                        if datetime.now(UTC) > expires_at:
                             continue
 
                     # Send message to user
@@ -673,7 +668,7 @@ class ScalableWebSocketManager:
 
                             if message.get("expires_at"):
                                 expires_at = datetime.fromisoformat(message["expires_at"])
-                                if datetime.now(timezone.utc) > expires_at:
+                                if datetime.now(UTC) > expires_at:
                                     await self.redis.lrem(queue_key, 1, message_data)
 
                         except json.JSONDecodeError:
@@ -690,7 +685,7 @@ class ScalableWebSocketManager:
             try:
                 await asyncio.sleep(60)  # Cleanup every minute
 
-                current_time = datetime.now(timezone.utc)
+                current_time = datetime.now(UTC)
                 stale_connections = []
 
                 for sid, connection in self.connections.items():
@@ -713,7 +708,7 @@ class ScalableWebSocketManager:
             try:
                 await asyncio.sleep(30)  # Update every 30 seconds
 
-                current_time = datetime.now(timezone.utc)
+                current_time = datetime.now(UTC)
 
                 # Update presence for active connections
                 for connection in self.connections.values():
@@ -785,7 +780,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Disconnection info storage error: {e}")
 
-    async def _handle_ack_message(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_ack_message(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle message acknowledgment"""
         try:
             message_id = data.get("message_id")
@@ -796,7 +791,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"ACK handling error: {e}")
 
-    async def _handle_presence_message(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_presence_message(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle presence status change"""
         try:
             status = data.get("status", "online")
@@ -814,7 +809,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Presence message error: {e}")
 
-    async def _handle_voice_message(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_voice_message(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle voice message"""
         try:
             # This would typically process voice data
@@ -826,7 +821,7 @@ class ScalableWebSocketManager:
                 "sender_id": connection.user_id,
                 "audio_data": data.get("audio_data"),
                 "duration": data.get("duration"),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
             await self.sio.emit("voice_message", voice_message, room=target_room)
@@ -834,7 +829,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Voice message error: {e}")
 
-    async def _handle_generic_message(self, connection: WebSocketConnection, data: Dict[str, Any]):
+    async def _handle_generic_message(self, connection: WebSocketConnection, data: dict[str, Any]):
         """Handle generic message types"""
         try:
             # Generic message relay
@@ -844,7 +839,7 @@ class ScalableWebSocketManager:
                     "type": data["type"],
                     "content": data.get("content", {}),
                     "sender_id": connection.user_id,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 room=connection.room,
             )
@@ -852,7 +847,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Generic message error: {e}")
 
-    async def _handle_cross_server_broadcast(self, data: Dict[str, Any]):
+    async def _handle_cross_server_broadcast(self, data: dict[str, Any]):
         """Handle cross-server broadcast messages"""
         try:
             message_type = data.get("type")
@@ -865,7 +860,7 @@ class ScalableWebSocketManager:
         except Exception as e:
             logger.error(f"Cross-server broadcast error: {e}")
 
-    async def _handle_cross_server_presence(self, data: Dict[str, Any]):
+    async def _handle_cross_server_presence(self, data: dict[str, Any]):
         """Handle cross-server presence updates"""
         try:
             user_id = data.get("user_id")
@@ -883,7 +878,7 @@ class ConsistentHashingManager:
     Consistent hashing for sticky sessions across multiple servers
     """
 
-    def __init__(self, servers: List[str], replicas: int = 3):
+    def __init__(self, servers: list[str], replicas: int = 3):
         self.servers = servers
         self.replicas = replicas
         self.ring = {}
@@ -941,7 +936,7 @@ class WebSocketApp:
     WebSocket application with aiohttp integration
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.ws_manager = ScalableWebSocketManager(config)
         self.app = web.Application()
@@ -972,7 +967,7 @@ class WebSocketApp:
         return web.json_response(
             {
                 "status": "healthy",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "connections": len(self.ws_manager.connections),
                 "active_rooms": len(self.ws_manager.room_members),
             }
@@ -1027,7 +1022,7 @@ class WebSocketApp:
         message = {
             "type": data.get("type", "broadcast"),
             "content": data.get("content"),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "sender": "system",
         }
 

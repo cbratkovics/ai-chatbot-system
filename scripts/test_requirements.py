@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def test_requirements(req_file):
     """Test if requirements file can be installed."""
     print(f"\n{'='*60}")

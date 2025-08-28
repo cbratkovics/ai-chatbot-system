@@ -1,11 +1,8 @@
 """Cache manager for handling multiple cache strategies and operations."""
 
-import asyncio
 import json
 import logging
-import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 import redis.asyncio as aioredis
 
@@ -61,7 +58,7 @@ class CacheManager:
         """
         return self.strategies.get(strategy_type, self)
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get value from cache.
 
         Args:
@@ -83,7 +80,7 @@ class CacheManager:
             logger.error(f"Cache get error: {e}")
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set cache value.
 
         Args:
@@ -158,7 +155,7 @@ class CacheManager:
             logger.error(f"Pattern invalidation error: {e}")
             return 0
 
-    async def get_batch(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_batch(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values from cache.
 
         Args:
@@ -171,7 +168,7 @@ class CacheManager:
             values = await self.redis_client.mget(keys)
             result = {}
 
-            for key, value in zip(keys, values):
+            for key, value in zip(keys, values, strict=False):
                 if value:
                     try:
                         if self.compression:
@@ -187,7 +184,7 @@ class CacheManager:
             logger.error(f"Batch get error: {e}")
             return {}
 
-    async def set_batch(self, items: Dict[str, Any], ttl: Optional[int] = None) -> int:
+    async def set_batch(self, items: dict[str, Any], ttl: int | None = None) -> int:
         """Set multiple cache entries.
 
         Args:
@@ -218,7 +215,7 @@ class CacheManager:
             logger.error(f"Clear all error: {e}")
             return False
 
-    async def get_statistics(self) -> Dict[str, Any]:
+    async def get_statistics(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -245,7 +242,7 @@ class CacheManager:
             logger.error(f"Statistics error: {e}")
             return {}
 
-    async def warmup(self, data: List[Dict[str, Any]]) -> int:
+    async def warmup(self, data: list[dict[str, Any]]) -> int:
         """Warmup cache with predefined data.
 
         Args:
@@ -280,7 +277,7 @@ class CacheManager:
             logger.error(f"Backup error: {e}")
             return False
 
-    async def restore(self, backup_data: Dict[str, Any]) -> bool:
+    async def restore(self, backup_data: dict[str, Any]) -> bool:
         """Restore cache from backup.
 
         Args:

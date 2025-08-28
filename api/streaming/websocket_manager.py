@@ -1,13 +1,11 @@
 """Enhanced WebSocket manager with reconnection, heartbeat, and room-based broadcasting."""
 
 import asyncio
-import json
 import logging
-import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -29,15 +27,15 @@ class ConnectionInfo:
 
     websocket: WebSocket
     session_id: str
-    tenant_id: Optional[str]
-    user_id: Optional[str]
+    tenant_id: str | None
+    user_id: str | None
     state: ConnectionState
     connected_at: datetime
     last_heartbeat: datetime
-    room_ids: Set[str]
-    metadata: Dict[str, Any]
-    message_queue: List[Dict[str, Any]]
-    reconnect_token: Optional[str]
+    room_ids: set[str]
+    metadata: dict[str, Any]
+    message_queue: list[dict[str, Any]]
+    reconnect_token: str | None
 
 
 class WebSocketManager:
@@ -67,11 +65,11 @@ class WebSocketManager:
         self.enable_rooms = enable_rooms
 
         # Connection storage
-        self.connections: Dict[str, ConnectionInfo] = {}
-        self.reconnect_tokens: Dict[str, str] = {}  # token -> session_id
+        self.connections: dict[str, ConnectionInfo] = {}
+        self.reconnect_tokens: dict[str, str] = {}  # token -> session_id
 
         # Room management
-        self.rooms: Dict[str, Set[str]] = {}  # room_id -> session_ids
+        self.rooms: dict[str, set[str]] = {}  # room_id -> session_ids
 
         # Background tasks
         self.heartbeat_task = None
@@ -90,10 +88,10 @@ class WebSocketManager:
         self,
         websocket: WebSocket,
         session_id: str,
-        tenant_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        reconnect_token: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+        reconnect_token: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ConnectionInfo:
         """Accept WebSocket connection.
 
@@ -211,7 +209,7 @@ class WebSocketManager:
         self.stats["total_disconnections"] += 1
         logger.info(f"WebSocket disconnected: {session_id}")
 
-    async def send_message(self, session_id: str, message: Dict[str, Any]) -> bool:
+    async def send_message(self, session_id: str, message: dict[str, Any]) -> bool:
         """Send message to specific connection.
 
         Args:
@@ -248,7 +246,7 @@ class WebSocketManager:
             await self._queue_message(session_id, message)
             return False
 
-    async def broadcast(self, message: Dict[str, Any], exclude: Optional[List[str]] = None):
+    async def broadcast(self, message: dict[str, Any], exclude: list[str] | None = None):
         """Broadcast message to all connections.
 
         Args:
@@ -346,7 +344,7 @@ class WebSocketManager:
         return False
 
     async def room_broadcast(
-        self, room_id: str, message: Dict[str, Any], exclude: Optional[List[str]] = None
+        self, room_id: str, message: dict[str, Any], exclude: list[str] | None = None
     ):
         """Broadcast message to all room members.
 
@@ -433,7 +431,7 @@ class WebSocketManager:
             except Exception as e:
                 logger.error(f"Cleanup loop error: {e}")
 
-    async def _queue_message(self, session_id: str, message: Dict[str, Any]):
+    async def _queue_message(self, session_id: str, message: dict[str, Any]):
         """Queue message for later delivery.
 
         Args:
@@ -451,7 +449,7 @@ class WebSocketManager:
                 conn_info.message_queue.pop(0)
                 conn_info.message_queue.append(message)
 
-    async def _send_queued_messages(self, websocket: WebSocket, queue: List[Dict[str, Any]]):
+    async def _send_queued_messages(self, websocket: WebSocket, queue: list[dict[str, Any]]):
         """Send queued messages to reconnected client.
 
         Args:
@@ -497,7 +495,7 @@ class WebSocketManager:
         if token in self.reconnect_tokens:
             del self.reconnect_tokens[token]
 
-    async def get_connection_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_connection_info(self, session_id: str) -> dict[str, Any] | None:
         """Get connection information.
 
         Args:
@@ -523,7 +521,7 @@ class WebSocketManager:
             "metadata": conn_info.metadata,
         }
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get manager statistics.
 
         Returns:

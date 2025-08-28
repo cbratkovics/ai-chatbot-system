@@ -4,16 +4,13 @@ import asyncio
 import json
 import logging
 import time
-import weakref
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
 from uuid import UUID, uuid4
 
 from fastapi import WebSocket, WebSocketDisconnect
 
 from .events import (
-    ConnectionEvent,
     ErrorEvent,
     EventType,
     HeartbeatEvent,
@@ -53,20 +50,20 @@ class WebSocketConnection:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     websocket: WebSocket = None
-    tenant_id: Optional[UUID] = None
-    user_id: Optional[str] = None
-    conversation_id: Optional[UUID] = None
+    tenant_id: UUID | None = None
+    user_id: str | None = None
+    conversation_id: UUID | None = None
 
     # Connection state
     authenticated: bool = False
-    subscribed_events: Set[EventType] = field(default_factory=set)
-    metadata: Dict = field(default_factory=dict)
+    subscribed_events: set[EventType] = field(default_factory=set)
+    metadata: dict = field(default_factory=dict)
 
     # Statistics
     stats: ConnectionStats = field(default_factory=ConnectionStats)
 
     # Rate limiting
-    message_timestamps: List[float] = field(default_factory=list)
+    message_timestamps: list[float] = field(default_factory=list)
 
     def __post_init__(self):
         """Initialize connection after creation."""
@@ -115,7 +112,7 @@ class WebSocketConnection:
             logger.error(f"Unexpected error sending event to connection {self.id}: {e}")
             raise
 
-    async def receive_event(self) -> Optional[WebSocketEvent]:
+    async def receive_event(self) -> WebSocketEvent | None:
         """Receive and parse event from WebSocket connection."""
         if not self.websocket:
             raise RuntimeError("WebSocket is not available")
@@ -187,17 +184,17 @@ class ConnectionManager:
     """Manages WebSocket connections with multi-tenant support."""
 
     def __init__(self, heartbeat_interval: int = 30, max_connections_per_tenant: int = 100):
-        self.connections: Dict[str, WebSocketConnection] = {}
-        self.tenant_connections: Dict[UUID, Set[str]] = {}
-        self.user_connections: Dict[str, Set[str]] = {}
-        self.conversation_connections: Dict[UUID, Set[str]] = {}
+        self.connections: dict[str, WebSocketConnection] = {}
+        self.tenant_connections: dict[UUID, set[str]] = {}
+        self.user_connections: dict[str, set[str]] = {}
+        self.conversation_connections: dict[UUID, set[str]] = {}
 
         self.heartbeat_interval = heartbeat_interval
         self.max_connections_per_tenant = max_connections_per_tenant
 
         # Background tasks
-        self._heartbeat_task: Optional[asyncio.Task] = None
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._heartbeat_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task | None = None
 
         # Statistics
         self.total_connections = 0
@@ -237,9 +234,9 @@ class ConnectionManager:
     async def connect(
         self,
         websocket: WebSocket,
-        tenant_id: Optional[UUID] = None,
-        user_id: Optional[str] = None,
-        conversation_id: Optional[UUID] = None,
+        tenant_id: UUID | None = None,
+        user_id: str | None = None,
+        conversation_id: UUID | None = None,
     ) -> WebSocketConnection:
         """Accept new WebSocket connection."""
 
@@ -371,7 +368,7 @@ class ConnectionManager:
         connection_ids = set(self.connections.keys())
         await self._broadcast_to_connections(connection_ids, event)
 
-    async def _broadcast_to_connections(self, connection_ids: Set[str], event: WebSocketEvent):
+    async def _broadcast_to_connections(self, connection_ids: set[str], event: WebSocketEvent):
         """Broadcast event to specific connections."""
         if not connection_ids:
             return
@@ -440,11 +437,11 @@ class ConnectionManager:
             except Exception as e:
                 logger.error(f"Error in cleanup loop: {e}")
 
-    def get_connection(self, connection_id: str) -> Optional[WebSocketConnection]:
+    def get_connection(self, connection_id: str) -> WebSocketConnection | None:
         """Get connection by ID."""
         return self.connections.get(connection_id)
 
-    def get_connection_stats(self) -> Dict:
+    def get_connection_stats(self) -> dict:
         """Get overall connection statistics."""
         active_connections = len(self.connections)
         total_uptime = sum(conn.stats.uptime_seconds for conn in self.connections.values())

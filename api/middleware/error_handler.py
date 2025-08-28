@@ -3,12 +3,11 @@
 import logging
 import time
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +189,7 @@ class GlobalErrorHandler:
 
     @staticmethod
     async def handle_provider_error(
-        request: Request, provider_name: str, error_message: str, error_code: Optional[str] = None
+        request: Request, provider_name: str, error_message: str, error_code: str | None = None
     ) -> JSONResponse:
         """Handle AI provider-specific errors."""
 
@@ -254,7 +253,7 @@ class GlobalErrorHandler:
         error_type: str,
         message: str,
         status_code: int = 500,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         correlation_id: str = "unknown",
     ) -> JSONResponse:
         """Create a standardized error response."""

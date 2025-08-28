@@ -2,6 +2,7 @@
 """Test script to verify configuration loading."""
 
 import sys
+
 from api.core.config import settings
 
 

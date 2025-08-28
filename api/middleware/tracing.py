@@ -4,11 +4,11 @@ Author: Christopher J. Bratkovics
 Purpose: Distributed tracing for observability
 """
 
-import json
 import logging
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 from fastapi import Request, Response
 from opentelemetry import trace
@@ -16,7 +16,7 @@ from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.propagate import extract, inject
+from opentelemetry.propagate import extract
 from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -268,7 +268,7 @@ class TracingMiddleware:
                     try:
                         async for chunk in func(*args, **kwargs):
                             chunk_count += 1
-                            if isinstance(chunk, (str, bytes)):
+                            if isinstance(chunk, str | bytes):
                                 total_size += len(chunk)
                             yield chunk
 
@@ -289,12 +289,12 @@ class TracingMiddleware:
         return decorator
 
 
-def get_current_span() -> Optional[trace.Span]:
+def get_current_span() -> trace.Span | None:
     """Get the current active span"""
     return trace.get_current_span()
 
 
-def add_span_event(name: str, attributes: Dict[str, Any] = None):
+def add_span_event(name: str, attributes: dict[str, Any] = None):
     """Add an event to the current span"""
     span = get_current_span()
     if span and span.is_recording():

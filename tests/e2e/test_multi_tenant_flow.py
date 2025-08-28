@@ -1,9 +1,7 @@
 """End-to-end tests for multi-tenant flow."""
 
 import asyncio
-import json
 from datetime import datetime, timedelta
-from typing import Dict, List
 
 import pytest
 from httpx import AsyncClient

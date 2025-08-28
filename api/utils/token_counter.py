@@ -1,4 +1,3 @@
-from typing import Dict, List, Union
 
 import tiktoken
 
@@ -18,7 +17,7 @@ class TokenCounter:
         encoder = self.encoders.get(model, self.encoders["default"])
         return len(encoder.encode(text))
 
-    def count_messages_tokens(self, messages: List[Message], model: str = "gpt-4") -> int:
+    def count_messages_tokens(self, messages: list[Message], model: str = "gpt-4") -> int:
         """Count total tokens for a list of messages"""
         encoder = self.encoders.get(model, self.encoders["default"])
 
@@ -42,7 +41,7 @@ class TokenCounter:
 
         return num_tokens
 
-    def estimate_cost(self, input_tokens: int, output_tokens: int, model: str) -> Dict[str, float]:
+    def estimate_cost(self, input_tokens: int, output_tokens: int, model: str) -> dict[str, float]:
         """Estimate cost breakdown for token usage"""
         pricing = {
             "gpt-4": {"input": 0.03, "output": 0.06},

@@ -3,10 +3,9 @@
 import asyncio
 import logging
 import time
-from collections import defaultdict, deque
-from typing import Dict, Optional, Tuple
+from collections import deque
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -64,7 +63,7 @@ class SlidingWindowCounter:
         self.requests = deque()
         self._lock = asyncio.Lock()
 
-    async def is_allowed(self) -> Tuple[bool, Dict[str, int]]:
+    async def is_allowed(self) -> tuple[bool, dict[str, int]]:
         """Check if request is allowed within the sliding window."""
         async with self._lock:
             now = time.time()
@@ -110,8 +109,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.burst_size = burst_size
 
         # Rate limiters by key (tenant_id:endpoint, ip:endpoint, etc.)
-        self.token_buckets: Dict[str, TokenBucket] = {}
-        self.sliding_windows: Dict[str, SlidingWindowCounter] = {}
+        self.token_buckets: dict[str, TokenBucket] = {}
+        self.sliding_windows: dict[str, SlidingWindowCounter] = {}
 
         # Endpoint-specific limits
         self.endpoint_limits = {
@@ -189,7 +188,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
         return f"ip:{client_ip}:{request.url.path}"
 
-    def _get_rate_limits(self, request: Request) -> Tuple[int, int]:
+    def _get_rate_limits(self, request: Request) -> tuple[int, int]:
         """Get rate limits for the request."""
 
         # Check endpoint-specific limits
@@ -209,7 +208,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def _check_rate_limit(
         self, key: str, rpm: int, burst: int
-    ) -> Tuple[bool, Dict[str, int]]:
+    ) -> tuple[bool, dict[str, int]]:
         """Check if request is allowed based on rate limits."""
 
         # Token bucket for burst handling
@@ -295,7 +294,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 logger.error(f"Rate limiter cleanup error: {str(e)}")
 
-    def get_rate_limit_status(self, key: str) -> Dict[str, any]:
+    def get_rate_limit_status(self, key: str) -> dict[str, any]:
         """Get current rate limit status for a key (for monitoring)."""
         bucket_key = f"bucket:{key}"
         window_key = f"window:{key}"

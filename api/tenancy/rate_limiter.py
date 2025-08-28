@@ -5,7 +5,6 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +49,12 @@ class TenantRateLimiter:
     """Per-tenant rate limiter using token bucket algorithm."""
 
     def __init__(self):
-        self.buckets: Dict[str, Dict[str, TokenBucket]] = {}
+        self.buckets: dict[str, dict[str, TokenBucket]] = {}
         self.lock = asyncio.Lock()
 
     async def check_rate_limit(
         self, tenant_id: str, resource: str, tokens: int = 1, tier: str = "basic"
-    ) -> Tuple[bool, Dict[str, any]]:
+    ) -> tuple[bool, dict[str, any]]:
         """Check if request is within rate limits.
 
         Args:
@@ -117,7 +116,7 @@ class TenantRateLimiter:
 
         return self.buckets[tenant_id][resource]
 
-    def _get_resource_limits(self, resource: str, tier: str) -> Dict[str, float]:
+    def _get_resource_limits(self, resource: str, tier: str) -> dict[str, float]:
         """Get rate limits for resource and tier.
 
         Args:
@@ -165,7 +164,7 @@ class TenantRateLimiter:
                 del self.buckets[tenant_id]
                 logger.info(f"Reset rate limits for tenant: {tenant_id}")
 
-    async def get_tenant_status(self, tenant_id: str) -> Dict[str, Dict[str, any]]:
+    async def get_tenant_status(self, tenant_id: str) -> dict[str, dict[str, any]]:
         """Get current rate limit status for tenant.
 
         Args:
@@ -203,7 +202,7 @@ class DistributedRateLimiter:
         tokens: int = 1,
         window_seconds: int = 60,
         max_tokens: int = 100,
-    ) -> Tuple[bool, Dict[str, any]]:
+    ) -> tuple[bool, dict[str, any]]:
         """Check rate limit using sliding window in Redis.
 
         Args:
@@ -270,7 +269,7 @@ class DistributedRateLimiter:
 
     async def get_usage_stats(
         self, tenant_id: str, resource: str, window_seconds: int = 60
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """Get current usage statistics.
 
         Args:
@@ -315,7 +314,7 @@ class UsageTracker:
         self.db = db_session
 
     async def track_usage(
-        self, tenant_id: str, metric_type: str, amount: float, metadata: Optional[Dict] = None
+        self, tenant_id: str, metric_type: str, amount: float, metadata: dict | None = None
     ):
         """Track usage metric.
 
@@ -348,7 +347,7 @@ class UsageTracker:
         metric_type: str,
         amount: float,
         timestamp: datetime,
-        metadata: Optional[Dict],
+        metadata: dict | None,
     ):
         """Store usage record in database.
 
@@ -376,7 +375,7 @@ class UsageTracker:
         except Exception as e:
             logger.error(f"Failed to store usage record: {e}")
 
-    async def get_usage_summary(self, tenant_id: str, period: str = "day") -> Dict[str, any]:
+    async def get_usage_summary(self, tenant_id: str, period: str = "day") -> dict[str, any]:
         """Get usage summary for period.
 
         Args:

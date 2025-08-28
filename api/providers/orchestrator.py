@@ -3,15 +3,13 @@
 import asyncio
 import logging
 import random
-import time
-from typing import AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
 
 from .base import (
     BaseProvider,
     CompletionRequest,
     CompletionResponse,
     ProviderError,
-    ProviderStatus,
     RateLimitError,
     StreamChunk,
 )
@@ -35,7 +33,7 @@ class ProviderOrchestrator:
 
     def __init__(
         self,
-        providers: List[BaseProvider],
+        providers: list[BaseProvider],
         strategy: str = LoadBalancingStrategy.WEIGHTED_ROUND_ROBIN,
         max_retries: int = 3,
         timeout: float = 30.0,
@@ -66,7 +64,7 @@ class ProviderOrchestrator:
 
         logger.info(f"Orchestrator initialized with {len(providers)} providers using {strategy}")
 
-    def get_healthy_providers(self) -> List[BaseProvider]:
+    def get_healthy_providers(self) -> list[BaseProvider]:
         """Get list of healthy providers."""
         healthy = []
 
@@ -86,7 +84,7 @@ class ProviderOrchestrator:
 
         return healthy
 
-    def select_provider(self, request: CompletionRequest) -> Optional[BaseProvider]:
+    def select_provider(self, request: CompletionRequest) -> BaseProvider | None:
         """Select best provider based on strategy."""
         healthy_providers = self.get_healthy_providers()
 
@@ -126,13 +124,13 @@ class ProviderOrchestrator:
             logger.warning(f"Unknown strategy {self.strategy}, using round robin")
             return self._round_robin_selection(compatible_providers)
 
-    def _round_robin_selection(self, providers: List[BaseProvider]) -> BaseProvider:
+    def _round_robin_selection(self, providers: list[BaseProvider]) -> BaseProvider:
         """Simple round robin selection."""
         provider = providers[self._round_robin_index % len(providers)]
         self._round_robin_index += 1
         return provider
 
-    def _weighted_round_robin_selection(self, providers: List[BaseProvider]) -> BaseProvider:
+    def _weighted_round_robin_selection(self, providers: list[BaseProvider]) -> BaseProvider:
         """Weighted round robin based on success rate."""
         weights = []
 
@@ -160,11 +158,11 @@ class ProviderOrchestrator:
 
         return providers[-1]  # Fallback
 
-    def _least_latency_selection(self, providers: List[BaseProvider]) -> BaseProvider:
+    def _least_latency_selection(self, providers: list[BaseProvider]) -> BaseProvider:
         """Select provider with lowest average latency."""
         return min(providers, key=lambda p: p.metrics.average_latency or float("inf"))
 
-    def _least_loaded_selection(self, providers: List[BaseProvider]) -> BaseProvider:
+    def _least_loaded_selection(self, providers: list[BaseProvider]) -> BaseProvider:
         """Select provider with least current load (concurrent requests)."""
         # Use semaphore count as a proxy for current load
         return min(providers, key=lambda p: p._semaphore._value)
@@ -328,7 +326,7 @@ class ProviderOrchestrator:
                 retryable=False,
             )
 
-    async def health_check(self) -> Dict:
+    async def health_check(self) -> dict:
         """Get orchestrator and provider health status."""
         provider_health = {}
 

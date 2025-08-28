@@ -3,7 +3,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 from .cost_tracker import CostTracker
 
@@ -38,8 +37,8 @@ class CostAnalyzer:
         logger.info("Cost analyzer initialized")
 
     def analyze_costs(
-        self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None
-    ) -> Dict:
+        self, start_time: datetime | None = None, end_time: datetime | None = None
+    ) -> dict:
         """Perform comprehensive cost analysis."""
 
         # Get cost summary
@@ -92,7 +91,7 @@ class CostAnalyzer:
 
         return analysis
 
-    def _analyze_trends(self) -> Dict:
+    def _analyze_trends(self) -> dict:
         """Analyze cost trends."""
 
         # Compare last 7 days to previous 7 days
@@ -120,7 +119,7 @@ class CostAnalyzer:
             "daily_costs_last_7_days": self._get_daily_costs(7),
         }
 
-    def _get_daily_costs(self, days: int) -> List[Dict]:
+    def _get_daily_costs(self, days: int) -> list[dict]:
         """Get daily costs for the last N days."""
         daily_costs = []
 
@@ -134,7 +133,7 @@ class CostAnalyzer:
 
         return list(reversed(daily_costs))
 
-    def _generate_optimizations(self, summary) -> List[Dict]:
+    def _generate_optimizations(self, summary) -> list[dict]:
         """Generate optimization recommendations."""
         optimizations = []
 
@@ -199,7 +198,7 @@ class CostAnalyzer:
 
         return [opt.to_dict() for opt in optimizations]
 
-    def get_tenant_analysis(self, tenant_id: str) -> Dict:
+    def get_tenant_analysis(self, tenant_id: str) -> dict:
         """Analyze costs for a specific tenant."""
 
         # Get tenant usage

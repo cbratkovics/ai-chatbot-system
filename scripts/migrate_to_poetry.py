@@ -4,17 +4,14 @@ Migrate from requirements.txt to Poetry dependency management.
 This script provides a safe, reversible migration path.
 """
 
-import json
 import logging
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import click
 import toml
-from packaging import version
 from packaging.requirements import Requirement
 
 # Configure logging
@@ -90,14 +87,14 @@ echo "Restore complete!"
             logger.error(f"Backup failed: {e}")
             return False
     
-    def parse_requirements_file(self, file_path: Path) -> List[Requirement]:
+    def parse_requirements_file(self, file_path: Path) -> list[Requirement]:
         """Parse a requirements.txt file."""
         requirements = []
         
         if not file_path.exists():
             return requirements
         
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             for line in f:
                 line = line.strip()
                 # Skip comments and empty lines
@@ -110,7 +107,7 @@ echo "Restore complete!"
         
         return requirements
     
-    def merge_requirements(self) -> Dict[str, List[Requirement]]:
+    def merge_requirements(self) -> dict[str, list[Requirement]]:
         """Merge all requirements files into categorized groups."""
         merged = {
             "main": [],
@@ -132,7 +129,7 @@ echo "Restore complete!"
         
         return merged
     
-    def resolve_conflicts(self, requirements: Dict[str, List[Requirement]]) -> Dict[str, List[Requirement]]:
+    def resolve_conflicts(self, requirements: dict[str, list[Requirement]]) -> dict[str, list[Requirement]]:
         """Resolve version conflicts between requirements."""
         resolved = {}
         all_packages = {}
@@ -164,7 +161,7 @@ echo "Restore complete!"
         
         return resolved
     
-    def _choose_version(self, versions: List[Tuple[str, Requirement]]) -> Tuple[str, Requirement]:
+    def _choose_version(self, versions: list[tuple[str, Requirement]]) -> tuple[str, Requirement]:
         """Choose the best version from conflicting requirements."""
         # Prefer main > prod > dev
         priority = {"main": 0, "prod": 1, "dev": 2}
@@ -173,7 +170,7 @@ echo "Restore complete!"
         sorted_versions = sorted(versions, key=lambda x: priority.get(x[0], 999))
         return sorted_versions[0]
     
-    def generate_poetry_config(self, requirements: Dict[str, List[Requirement]]) -> Dict:
+    def generate_poetry_config(self, requirements: dict[str, list[Requirement]]) -> dict:
         """Generate Poetry configuration from requirements."""
         poetry_config = {
             "tool": {

@@ -1,7 +1,8 @@
 """OpenAI provider implementation."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import tiktoken
 
@@ -12,7 +13,7 @@ class OpenAIProvider:
     """OpenAI model provider."""
 
     def __init__(
-        self, client: Optional[Any] = None, api_key: Optional[str] = None, max_retries: int = 3
+        self, client: Any | None = None, api_key: str | None = None, max_retries: int = 3
     ):
         """Initialize OpenAI provider.
 
@@ -49,7 +50,7 @@ class OpenAIProvider:
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")
 
-    async def chat_completion(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def chat_completion(self, request: dict[str, Any]) -> dict[str, Any]:
         """Create chat completion.
 
         Args:
@@ -85,8 +86,8 @@ class OpenAIProvider:
             raise
 
     async def stream_completion(
-        self, request: Dict[str, Any]
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+        self, request: dict[str, Any]
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """Stream chat completion.
 
         Args:
@@ -101,7 +102,7 @@ class OpenAIProvider:
         async for chunk in stream:
             yield chunk.model_dump()
 
-    async def chat_completion_with_retry(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def chat_completion_with_retry(self, request: dict[str, Any]) -> dict[str, Any]:
         """Chat completion with retry logic.
 
         Args:
@@ -115,7 +116,7 @@ class OpenAIProvider:
         for attempt in range(self.max_retries):
             try:
                 return await self.chat_completion(request)
-            except Exception as e:
+            except Exception:
                 if attempt == self.max_retries - 1:
                     raise
 
@@ -164,7 +165,7 @@ class OpenAIProvider:
             logger.error(f"Health check failed: {e}")
             return False
 
-    def format_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def format_messages(self, messages: list[dict[str, str]]) -> list[dict[str, str]]:
         """Format messages for OpenAI API.
 
         Args:

@@ -1,8 +1,6 @@
 """Application configuration management."""
 
-import os
 from functools import lru_cache
-from typing import List, Optional
 
 from pydantic import BaseSettings, Field
 
@@ -22,11 +20,11 @@ class Settings(BaseSettings):
     workers: int = Field(default=4, env="WORKERS")
 
     # CORS Configuration
-    allowed_origins: List[str] = Field(
+    allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:8000"], env="ALLOWED_ORIGINS"
     )
-    allowed_methods: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allowed_headers: List[str] = ["*"]
+    allowed_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: list[str] = ["*"]
 
     # Database Configuration
     database_url: str = Field(
@@ -39,8 +37,8 @@ class Settings(BaseSettings):
     redis_max_connections: int = Field(default=100, env="REDIS_MAX_CONNECTIONS")
 
     # Provider Configuration
-    provider_a_api_key: Optional[str] = Field(default=None, env="PROVIDER_A_API_KEY")
-    provider_b_api_key: Optional[str] = Field(default=None, env="PROVIDER_B_API_KEY")
+    provider_a_api_key: str | None = Field(default=None, env="PROVIDER_A_API_KEY")
+    provider_b_api_key: str | None = Field(default=None, env="PROVIDER_B_API_KEY")
     provider_timeout: int = Field(default=30, env="PROVIDER_TIMEOUT")
     max_retries: int = Field(default=3, env="MAX_RETRIES")
 
@@ -67,7 +65,7 @@ class Settings(BaseSettings):
     # Monitoring Configuration
     enable_metrics: bool = Field(default=True, env="ENABLE_METRICS")
     enable_tracing: bool = Field(default=True, env="ENABLE_TRACING")
-    jaeger_endpoint: Optional[str] = Field(default=None, env="JAEGER_ENDPOINT")
+    jaeger_endpoint: str | None = Field(default=None, env="JAEGER_ENDPOINT")
 
     # Performance Configuration
     max_concurrent_requests: int = Field(default=1000, env="MAX_CONCURRENT_REQUESTS")
@@ -81,7 +79,7 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached application settings."""
     return Settings()

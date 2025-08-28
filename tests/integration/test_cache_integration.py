@@ -1,11 +1,9 @@
 """Integration tests for cache integration."""
 
+import asyncio
 import json
 import time
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
 
-import numpy as np
 import pytest
 
 
