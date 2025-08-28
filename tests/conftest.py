@@ -168,42 +168,22 @@ def mock_openai_client():
 
 @pytest.fixture
 def mock_anthropic_client():
-    """Mock Anthropic client for testing."""
-    mock = MagicMock()
+    """Mock Anthropic client for testing"""
+    from unittest.mock import AsyncMock, Mock
     
-    # Mock message response
-    message_response = MagicMock()
-    message_response.content = [MagicMock(text="Test response")]
-    message_response.usage = MagicMock(
-        input_tokens=10,
-        output_tokens=20
-    )
-    message_response.model = "claude-3-opus-20240229"
-    message_response.stop_reason = "end_turn"
+    mock = Mock()
     
-    # Mock messages
-    mock.messages = MagicMock()
-    mock.messages.create = MagicMock(return_value=message_response)
+    # Create an async function that returns the response
+    async def async_create(**kwargs):
+        return Mock(
+            content=[Mock(text="Test response")], 
+            usage=Mock(input_tokens=50, output_tokens=50),
+            id="test-id",
+            model=kwargs.get('model', 'claude-3-sonnet')
+        )
     
-    # Mock streaming response
-    async def mock_stream():
-        events = [
-            MagicMock(
-                type="content_block_delta",
-                delta=MagicMock(text="Test ")
-            ),
-            MagicMock(
-                type="content_block_delta",
-                delta=MagicMock(text="response")
-            ),
-            MagicMock(
-                type="message_stop"
-            )
-        ]
-        for event in events:
-            yield event
-    
-    mock.messages.stream = AsyncMock(return_value=mock_stream())
+    # Assign the async function
+    mock.messages.create = async_create
     
     return mock
 
@@ -376,3 +356,40 @@ def cache():
             return key in storage
     
     return TestCache()
+@pytest.fixture
+def cache_config():
+    """Cache configuration for testing."""
+    return {
+        "similarity_threshold": 0.9,
+        "ttl_seconds": 3600,
+        "max_cache_size": 1000,
+        "embedding_model": "text-embedding-ada-002"
+    }
+
+# Override the mock_redis fixture
+@pytest.fixture
+def mock_redis():
+    """Mock Redis client for testing"""
+    mock = AsyncMock()
+    
+    # Configure get to return None by default (can be overridden in tests)
+    mock.get = AsyncMock(return_value=None)
+    
+    # Configure hget to return string values
+    mock.hget = AsyncMock(return_value=None)
+    
+    # Other methods with proper return types
+    mock.set = AsyncMock(return_value=True)
+    mock.setex = AsyncMock(return_value=True)
+    mock.exists = AsyncMock(return_value=False)
+    mock.delete = AsyncMock(return_value=1)
+    mock.incr = AsyncMock(return_value=1)
+    mock.expire = AsyncMock(return_value=True)
+    mock.ttl = AsyncMock(return_value=3600)
+    mock.zadd = AsyncMock(return_value=1)
+    mock.zrange = AsyncMock(return_value=[])
+    mock.ping = AsyncMock(return_value=True)
+    mock.hset = AsyncMock(return_value=1)
+    mock.hmset = AsyncMock(return_value=True)
+    
+    return mock
