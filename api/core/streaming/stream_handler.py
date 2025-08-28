@@ -32,7 +32,7 @@ class StreamHandler:
         self.timeout = timeout
         self.metrics_collector = metrics_collector
 
-    def create_sse_stream(
+    async def create_sse_stream(
         self, data_generator: AsyncGenerator[str, None]
     ) -> AsyncGenerator[str, None]:
         """Create Server-Sent Events stream.
@@ -43,16 +43,12 @@ class StreamHandler:
         Yields:
             SSE formatted chunks
         """
-
-        async def _sse_generator():
-            try:
-                async for data in data_generator:
-                    yield f"data: {json.dumps(data)}\n\n"
-            except Exception as e:
-                logger.error(f"SSE stream error: {e}")
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
-
-        return _sse_generator()
+        try:
+            async for data in data_generator:
+                yield f"data: {json.dumps(data)}\n\n"
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     def chunk_response(self, data: str, chunk_size: int | None = None) -> list[str]:
         """Split response into chunks.
@@ -81,17 +77,14 @@ class StreamHandler:
         """
         timeout = timeout or self.timeout
 
-        async def _timeout_generator():
-            try:
-                async for data in asyncio.wait_for(
-                    self._consume_generator(data_generator), timeout=timeout
-                ):
+        try:
+            # Set timeout for the entire iteration
+            async with asyncio.timeout(timeout):
+                async for data in data_generator:
                     yield data
-            except TimeoutError:
-                logger.error(f"Stream timeout after {timeout} seconds")
-                raise
-
-        return _timeout_generator()
+        except asyncio.TimeoutError:
+            logger.error(f"Stream timeout after {timeout} seconds")
+            raise
 
     async def _consume_generator(
         self, data_generator: AsyncGenerator[Any, None]
@@ -118,16 +111,12 @@ class StreamHandler:
         Yields:
             Data chunks
         """
-
-        async def _handled_generator():
-            try:
-                async for data in data_generator:
-                    yield data
-            except Exception as e:
-                logger.error(f"Stream error: {e}")
-                raise
-
-        return _handled_generator()
+        try:
+            async for data in data_generator:
+                yield data
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            raise
 
     async def buffer_stream(
         self, data_generator: AsyncGenerator[Any, None], buffer_size: int | None = None
@@ -142,21 +131,17 @@ class StreamHandler:
             Buffered data batches
         """
         buffer_size = buffer_size or self.buffer_size
+        buffer = []
 
-        async def _buffered_generator():
-            buffer = []
+        async for data in data_generator:
+            buffer.append(data)
 
-            async for data in data_generator:
-                buffer.append(data)
-
-                if len(buffer) >= buffer_size:
-                    yield buffer
-                    buffer = []
-
-            if buffer:
+            if len(buffer) >= buffer_size:
                 yield buffer
+                buffer = []
 
-        return _buffered_generator()
+        if buffer:
+            yield buffer
 
     async def compress_stream(
         self, data_generator: AsyncGenerator[str, None]
@@ -171,19 +156,16 @@ class StreamHandler:
         """
         import zlib
 
-        async def _compressed_generator():
-            compressor = zlib.compressobj()
+        compressor = zlib.compressobj()
 
-            async for data in data_generator:
-                compressed = compressor.compress(data.encode())
-                if compressed:
-                    yield compressed
+        async for data in data_generator:
+            compressed = compressor.compress(data.encode())
+            if compressed:
+                yield compressed
 
-            final = compressor.flush()
-            if final:
-                yield final
-
-        return _compressed_generator()
+        final = compressor.flush()
+        if final:
+            yield final
 
     async def rate_limit_stream(
         self, data_generator: AsyncGenerator[Any, None], rate: float = 10.0
@@ -199,12 +181,9 @@ class StreamHandler:
         """
         interval = 1.0 / rate
 
-        async def _rate_limited_generator():
-            async for data in data_generator:
-                yield data
-                await asyncio.sleep(interval)
-
-        return _rate_limited_generator()
+        async for data in data_generator:
+            yield data
+            await asyncio.sleep(interval)
 
     async def stream_with_metrics(
         self, data_generator: AsyncGenerator[Any, None], stream_id: str
@@ -218,43 +197,39 @@ class StreamHandler:
         Yields:
             Data chunks
         """
+        chunks_sent = 0
+        bytes_sent = 0
+        start_time = asyncio.get_event_loop().time()
 
-        async def _metered_generator():
-            chunks_sent = 0
-            bytes_sent = 0
-            start_time = asyncio.get_event_loop().time()
+        try:
+            async for data in data_generator:
+                yield data
 
-            try:
-                async for data in data_generator:
-                    yield data
-
-                    chunks_sent += 1
-                    if isinstance(data, str | bytes):
-                        bytes_sent += len(data)
-
-                    if self.metrics_collector:
-                        self.metrics_collector.record_gauge(
-                            "stream.chunks_sent", chunks_sent, {"stream_id": stream_id}
-                        )
-
-            finally:
-                duration = asyncio.get_event_loop().time() - start_time
+                chunks_sent += 1
+                if isinstance(data, str | bytes):
+                    bytes_sent += len(data)
 
                 if self.metrics_collector:
-                    self.metrics_collector.record_latency(
-                        "stream.duration", duration, {"stream_id": stream_id}
-                    )
                     self.metrics_collector.record_gauge(
-                        "stream.bytes_sent", bytes_sent, {"stream_id": stream_id}
+                        "stream.chunks_sent", chunks_sent, {"stream_id": stream_id}
                     )
 
-                logger.info(
-                    f"Stream {stream_id} completed: "
-                    f"{chunks_sent} chunks, {bytes_sent} bytes, "
-                    f"{duration:.2f}s"
+        finally:
+            duration = asyncio.get_event_loop().time() - start_time
+
+            if self.metrics_collector:
+                self.metrics_collector.record_latency(
+                    "stream.duration", duration, {"stream_id": stream_id}
+                )
+                self.metrics_collector.record_gauge(
+                    "stream.bytes_sent", bytes_sent, {"stream_id": stream_id}
                 )
 
-        return _metered_generator()
+            logger.info(
+                f"Stream {stream_id} completed: "
+                f"{chunks_sent} chunks, {bytes_sent} bytes, "
+                f"{duration:.2f}s"
+            )
 
     async def merge_streams(
         self, *generators: AsyncGenerator[Any, None]
@@ -267,22 +242,18 @@ class StreamHandler:
         Yields:
             Merged data from all streams
         """
+        queue = asyncio.Queue()
+        tasks = [asyncio.create_task(self._consume_to_queue(gen, queue)) for gen in generators]
 
-        async def _merged_generator():
-            queue = asyncio.Queue()
-            tasks = [asyncio.create_task(self._consume_to_queue(gen, queue)) for gen in generators]
+        while any(not task.done() for task in tasks):
+            try:
+                data = await asyncio.wait_for(queue.get(), timeout=1.0)
+                yield data
+            except asyncio.TimeoutError:
+                continue
 
-            while any(not task.done() for task in tasks):
-                try:
-                    data = await asyncio.wait_for(queue.get(), timeout=1.0)
-                    yield data
-                except TimeoutError:
-                    continue
-
-            while not queue.empty():
-                yield await queue.get()
-
-        return _merged_generator()
+        while not queue.empty():
+            yield await queue.get()
 
     async def _consume_to_queue(self, generator: AsyncGenerator[Any, None], queue: asyncio.Queue):
         """Consume generator to queue.
